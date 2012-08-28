@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block main %}
+<h2>My Color</h2>
+{{ form.errors }}
+<div>
+
+    <div id="mycolor"></div>
+    <div id="mycolor-display" style="background-color:{{ mycolor.color_choice }};
+        height: 200px;
+        width: 600px;"></div>
+    <form action="" method="POST">
+    {% for hidden in form.hidden_fields %}
+    {{ hidden }}
+    {% endfor %}
+    {% csrf_token %}
+    <input class="colorpicker" id="id_color_choice" name="color_choice" value="{{ mycolor.color_choice }}" type="hidden">
+    <input type="submit" name="change_color" value="Update" />
+</div>
+{% if not mycolor.id %}
+{{ form.as_p }}
+{% endif %}
+</form>
+<ul>
+{% for obj in object_list %}
+{% if obj != mycolor %}
+<li>{{ obj.get_absolute_url }}<div id="color-{{ obj.id }}" class="color-item"> {{ obj }}
+<div class="color-box" style="
+            background-color:{{ obj.color_choice }};
+            height: 20px;
+            width: 50px;"></div></div></li>
+{% endif %}
+{% endfor %}
+</ul>
+
+{% endblock %}
+{% block extrascripts %}
+<script type="text/javascript" charset="utf-8">
+    $(function(){
+            var colorid = $.cookie('colorid');
+
+            $(".colorpicker").miniColors({
+                change: function(hex, rgb){
+                    $("#mycolor-display").css("background-color", hex)}});});
+            $("#mycolor-display").click(function(){
+                $("#id_color_choice").triggerHandler("focus");
+            });
+</script>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block main %}
+{% endblock %}
+
+{% block extrascripts %}
+<script src="{{ STATIC_URL }}js/colorsapp.js" type="text/javascript" charset="utf-8"></script>
+
+  <script type="text/template" id="item-template">
+    <div class="view">
+      <label><%= title %></label>
+      <a class="destroy"></a>
+    </div>
+    <input class="edit" type="text" value="<%= title %>" />
+  </script>
+
+{% endblock %}
+
