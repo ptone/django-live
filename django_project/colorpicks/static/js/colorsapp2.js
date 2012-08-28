@@ -11,7 +11,7 @@ window.log = function(){
   }
 };
 
-window.socket = io.connect('http://localhost:8008');
+window.socket = io.connect('http://localhost:8000');
 log(window.socket);
 
 socket.emit("testemit", {test:"data"});

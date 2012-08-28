@@ -6,13 +6,11 @@ from socketio.mixins import BroadcastMixin
 
 from redis import Redis, ConnectionPool
 from socketio.namespace import allowed_event_name_regex
+
 from django.core import serializers
 from colorpicks.resources import ColorResource
 from colorpicks.models import ColorChoice
 from colorpicks.utils import get_colors_json
-
-dummy_api_response = [{"email": "mary@mary.com", "identifier": "as34klj34lk43", "id": 1, "name": "Mary", "color_choice": "#333333"}, {"email": "", "identifier": "1e2a8e172adbefb11540883c69532f30", "id": 2, "name": "", "color_choice": "#0e37ed"}, {"email": "bob@bob.com", "identifier": "5949b3b2692d7", "id": 3, "name": "bob", "color_choice": "#E80E91"}, {"email": "", "identifier": "4ab2956f6c03e978dcb94b1a0412d10b", "id": 4, "name": "", "color_choice": "#9D0DD6"}, {"email": "", "identifier": "fd045a6582bafc586963cbc1fbe4a2f5", "id": 5, "name": "", "color_choice": "#E8D01C"}, {"email": "", "identifier": "d358ea7904f61ddb180871d28ed8d36e", "id": 6, "name": "", "color_choice": "#7F7FE3"}, {"email": "", "identifier": "0697a284c1c8d2f28ec2a7000f415e80", "id": 7, "name": "", "color_choice": "#D60000"}, {"email": "", "identifier": "7ee16df18ce3776bec45b76c5a0ed069", "id": 8, "name": "", "color_choice": "#b9e8b2"}]
-
 
 class ColorsNamespace(BaseNamespace, BroadcastMixin):
 
@@ -23,7 +21,6 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         self.pubsub = self.redis.pubsub()
 
     def process_event(self, packet):
-        # print packet
         args = packet['args']
         # Special case here, where we want to allow ":" as sent by
         # backbone.iobine
@@ -60,7 +57,8 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         data = color_obj.data()
         # we add the ID back here - normally part of the URL/topic
         data['id'] = self.colorid
-        self.broadcast_event_not_me('colors:create', data)
+        if not self.redis.sismember('connected_users', self.identifier):
+            self.broadcast_event_not_me('colors:create', data)
         self.redis.sadd('connected_users', self.identifier)
 
     def on_subscribe(self, msg):
