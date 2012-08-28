@@ -40,5 +40,11 @@ class Application(object):
 
 if __name__ == '__main__':
     print 'starting gevent server'
-    SocketIOServer(('0.0.0.0',  os.environ['PORT']), Application(),
-        resource="socket.io", policy_server=True).serve_forever()
+    print "port", os.environ['PORT']
+    SocketIOServer(
+            ('0.0.0.0',  int(os.environ['PORT'])),
+            Application(),
+            resource="socket.io",
+            transports=['websocket'],
+            policy_server=False
+            ).serve_forever()

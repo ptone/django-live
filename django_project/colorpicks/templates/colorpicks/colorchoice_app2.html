@@ -12,7 +12,9 @@
 {% block extrascripts %}
 
 
-
+<script type="text/javascript" charset="utf-8">
+    window.socket_endpoint = 'http://{{request.META.SERVER_NAME }}:{{ request.META.SERVER_PORT }}';
+</script>
 <script src="{{ STATIC_URL }}js/libs/underscore.js"></script>
 <script src="{{ STATIC_URL }}js/libs/backbone.js"></script>
 <script src="{{ STATIC_URL }}js/libs/socket.io.min.js"></script>

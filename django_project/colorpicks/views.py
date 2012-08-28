@@ -1,26 +1,10 @@
-from django.core.urlresolvers import reverse
-# from django.views.generic import ListView
 from django.views.generic.edit import *
 from django.views.generic.detail import *
 from django.views.generic.list import *
 from django.db.models import ObjectDoesNotExist
 
-from djangorestframework.compat import View  # Use Django 1.3's django.views.generic.View, or fall back to a clone of that if Django < 1.3
-from djangorestframework.mixins import ResponseMixin
-from djangorestframework.renderers import DEFAULT_RENDERERS
-from djangorestframework.response import Response
-
 from colorpicks.models import ColorChoice
 from colorpicks.forms import ColorChoiceModelForm
-
-class ColorDataView(ResponseMixin, View):
-    renderers = DEFAULT_RENDERERS
-
-    def get(self, request):
-        response = Response(200, {'description': 'Some example content',
-                                  'url': reverse('data_view')})
-        return self.render(response)
-
 
 class ColorListView(
         ModelFormMixin,
@@ -31,6 +15,13 @@ class ColorListView(
         ProcessFormView,
         View,
         ):
+
+    """
+    This is crazy hack view that provides a form at the top of a listview
+
+    This provides the 'standard' request/response way of editing your color
+    while also showing you other people's color
+    """
 
     template_name = 'colorpicks/colorchoice_list.html'
     model = ColorChoice
@@ -73,14 +64,9 @@ class ColorListView(
             print 'no cookie for you'
         return super(ColorListView, self).get(request, *args, **kwargs)
 
-    # def post(self, request, *args, **kwargs):
-        # print "posted"
-        # return super(ProcessFormView, self).post(request, *args, **kwargs)
     def post(self, request, *args, **kwargs):
         print 'in post'
         self.object = self.get_object()
-        # request.POST['color_choice'] = request.POST['color_choice'].lstrip('#')
-        # print request.POST['color_choice']
         form_class = self.get_form_class()
         form = self.get_form(form_class)
         if form.is_valid():
@@ -90,14 +76,12 @@ class ColorListView(
             print 'form invalid'
             return self.form_invalid(form)
 
-    # def get_form_kwargs(self):
-        # kwargs = super(ColorListView, self).get_form_kwargs()
-        # kwargs
-
     def get_context_data(self, *args, **kwargs):
         context = super(ColorListView, self).get_context_data(*args, **kwargs)
         context.update({'request': self.request})
         context['mycolor'] = self.mycolor
         context['mycolorid'] = self.mycolor.id or 0
+        # this has to be added here, as we can't inherit from
+        # both listview and processformview
         context['form'] = self.get_form(self.get_form_class())
         return context

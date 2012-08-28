@@ -1,20 +1,18 @@
 import colorsys
 
-from django.core.urlresolvers import reverse
 from django.db import models
 
 def split_count(s, count):
      return [''.join(x) for x in zip(*[list(s[z::count]) for z in range(count)])]
 
-# Create your models here.
 class ColorChoice(models.Model):
     color_choice = models.CharField(max_length=7, default='#000000')
     name = models.CharField(max_length=100, blank=True)
     identifier = models.CharField(max_length=100)
     email = models.CharField(max_length=100, default='', blank=True)
-    hue = models.IntegerField(default=0)
-    saturation = models.IntegerField(default=0)
-    brightness = models.IntegerField(default=0)
+    hue = models.IntegerField(default=0, blank=True)
+    saturation = models.IntegerField(default=0, blank=True)
+    brightness = models.IntegerField(default=0, blank=True)
 
     def __unicode__(self):
         return '{}: {}'.format(self.name, self.color_choice)
@@ -36,15 +34,6 @@ class ColorChoice(models.Model):
     def save(self,  *args, **kwargs):
         self.hue, self.saturation, self.brightness = self.to_hsv()
         super(ColorChoice, self).save(*args, **kwargs)
-
-
-
-# dec to hex
-# print "%x" % 255
-# return "%02X" % d
-# dec to hex:
-# int(s, 16)
-
 
 
 # trigger module level execution of signal connection

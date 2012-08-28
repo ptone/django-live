@@ -11,6 +11,8 @@ def get_colors_json():
     """
     This is a surprising kludge to get the json from a
     DRF resource, outside of a true request/response context
+
+    for a simple resource - most easily mocked by doing list(queryset.values(fields))
     """
     resource_view = ListOrCreateModelView(resource=ColorResource)
     dummy_request = HttpRequest()

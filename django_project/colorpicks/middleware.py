@@ -1,6 +1,7 @@
 import time
 
 from django.conf import settings
+from django.shortcuts import redirect
 from django.utils.http import cookie_date
 
 from colorpicks.models import ColorChoice
@@ -9,31 +10,28 @@ from colorpicks.models import ColorChoice
 
 class SetColorIdMiddleware(object):
     def process_response(self, request, response):
-        # print request.session.keys()
-        # print '\n\n\n\n -=-=-=- =- =- -= =- =- -= = - - =- =- '
+        print request.path
         if request.session.session_key:
-            # print request.session.session_key
             colorid = 'unset'
             try:
                 obj = ColorChoice.objects.get(
                         identifier=request.session.session_key)
                 colorid = obj.id
             except ColorChoice.DoesNotExist:
-                print 'no color matching session'
+                # no color matching session
+                # create a new color with the current session as identifier
                 obj = ColorChoice.objects.create(identifier=request.session.session_key)
                 colorid = obj.id
-                pass
-            # request.session['colorid'] = colorid
-            # request.session.save()
-            # print request.session
-            max_age = request.session.get_expiry_age()
-            expires_time = time.time() + max_age
-            expires = cookie_date(expires_time)
-            print 'setting colorid cookie'
             response.set_cookie('colorid',
-                    colorid, max_age=max_age,
-                    expires=expires, domain=settings.SESSION_COOKIE_DOMAIN,
+                    colorid,
                     path=settings.SESSION_COOKIE_PATH,
                     secure=False,
                     httponly=False)
+        else:
+            request.session.flush()
+            if request.path == '/colors/app':
+                # This is sort of a hack - we only want to do a redirect
+                # for the conventional app in this demo - the other apps
+                # will use more dynamic methods
+                return redirect('/colors/app')
         return response

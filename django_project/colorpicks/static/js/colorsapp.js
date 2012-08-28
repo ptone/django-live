@@ -14,10 +14,12 @@ var ColorChoice = Backbone.Model.extend({
     toJSON: function() {
         var data = _.clone(this.attributes); 
         delete data.id;
+        console.log(data);
         return data
     },
 
     save: $.throttle(500, function(){
+        console.log("saving");
         Backbone.Model.prototype.save.call(this);
     }),
 
