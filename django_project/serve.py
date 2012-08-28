@@ -16,13 +16,9 @@ import os
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'django_project.settings'
 
-from gevent.wsgi import WSGIServer
 from django.core.handlers.wsgi import WSGIHandler
 
 from colorpicks.socket import ColorsNamespace
-
-
-# WSGIServer(('', 8088), WSGIHandler()).serve_forever()
 
 class Application(object):
 
@@ -36,14 +32,13 @@ class Application(object):
     def __call__(self, environ, start_response):
         path = environ['PATH_INFO'].strip('/')
         if path.startswith("socket.io"):
+            # here we hand off this request to a blocking socketio manager
+            # the Namespace subclass handles all the socketio messages
             socketio_manage(environ, {'': ColorsNamespace}, self.request)
         else:
             return self.django(environ, start_response)
 
-# socket = SocketIOServer(('', 8008), receive, resource='socket.io').serve_forever()
-
-
 if __name__ == '__main__':
-    print 'Listening on port 8080 and on port 843 (flash policy server)'
-    SocketIOServer(('0.0.0.0',  24722), Application(),
+    print 'starting gevent server'
+    SocketIOServer(('0.0.0.0',  os.environ['PORT']), Application(),
         resource="socket.io", policy_server=True).serve_forever()
