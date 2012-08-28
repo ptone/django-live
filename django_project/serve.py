@@ -45,6 +45,5 @@ class Application(object):
 
 if __name__ == '__main__':
     print 'Listening on port 8080 and on port 843 (flash policy server)'
-    SocketIOServer(('0.0.0.0', 8000), Application(),
-        resource="socket.io", policy_server=True,
-        policy_listener=('0.0.0.0', 10843)).serve_forever()
+    SocketIOServer(('0.0.0.0',  24722), Application(),
+        resource="socket.io", policy_server=True).serve_forever()

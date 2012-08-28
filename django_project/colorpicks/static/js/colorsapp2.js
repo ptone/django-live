@@ -11,7 +11,7 @@ window.log = function(){
   }
 };
 
-window.socket = io.connect('http://localhost:8000');
+window.socket = io.connect('http://route.heroku.com:24722');
 log(window.socket);
 
 socket.emit("testemit", {test:"data"});
