@@ -40,15 +40,15 @@ class Application(object):
 
 if __name__ == '__main__':
     print 'starting gevent server'
-    print "port", os.environ['PORT']
     port = 80
     try:
-        port = os.environ['PORT']
+        port = int(os.environ['PORT'])
     except KeyError as e:
         pass
+    print "port", os.environ['PORT']
 
     SocketIOServer(
-            ('0.0.0.0',  int(os.environ['PORT'])),
+            ('0.0.0.0',  port),
             Application(),
             resource="socket.io",
             transports=['websocket'],
