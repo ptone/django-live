@@ -41,6 +41,12 @@ class Application(object):
 if __name__ == '__main__':
     print 'starting gevent server'
     print "port", os.environ['PORT']
+    port = 80
+    try:
+        port = os.environ['PORT']
+    except KeyError as e:
+        pass
+
     SocketIOServer(
             ('0.0.0.0',  int(os.environ['PORT'])),
             Application(),
