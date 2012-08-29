@@ -11,7 +11,6 @@ window.log = function(){
   }
 };
 
-console.log(window.socket_endpoint);
 window.socket = io.connect(window.socket_endpoint);
 // window.socket = io.connect('http://localhost:8000');
 log(window.socket);
@@ -84,8 +83,7 @@ var ColorChoice = Backbone.Model.extend({
   modelCleanup: function () {
     this.ioUnbindAll();
     return this;
-  }
-
+  },
 
 });
 
@@ -156,20 +154,15 @@ var MyColorChoiceView = Backbone.View.extend({
     render: function () {
         console.log("rendering mycolor");
         this.$el.html(this.template(this.model.toJSON()));
-        // jquery add minicolors
-        // this is not working from inside render
-        //
-        // $(".colorpicker").miniColors({
-            // change: $.throttle(250, function(hex, rgb){
-                // $("#mycolor-display").css("background-color", hex)})
-                // });
+
         $("#mycolor-display").on("click", (function(){
             $("#id_color_choice").triggerHandler("focus");
             }));
 
-        // $("#mycolor-display").click(function(){
-            // $("#id_color_choice").triggerHandler("focus");
-            // });
+        $("#mycolor-name").change(_.bind(function (e){
+            this.model.set("name", $("#mycolor-name").val());
+            this.model.save();
+        }, this));
 
         return this;},
 
@@ -186,10 +179,6 @@ var ArrayView = Backbone.View.extend({
         this.collection.on("reset", function() { this.addAll() }, this);
         console.log("Fetching choices");
         this.collection.fetch();
-
-        // this.collection.fetch({
-            // success: this.addPostFetch,});
-        // this.addAll();
     },
 
     addOne: function(choiceItem) {
@@ -198,16 +187,18 @@ var ArrayView = Backbone.View.extend({
         socket.emit("subscribe", {url:choiceItem.url()});
 
         if (choiceItem.id != this.mycolorid){
-        var view = new ColorChoiceView({model:choiceItem});
-        this.$el.append(view.render().el);
+            var view = new ColorChoiceView({model:choiceItem});
+            this.$el.append(view.render().el);
         } else {
             console.log("my color");
             var view = new MyColorChoiceView({model:choiceItem});
             $("#mycolor").html(view.render().el);
 
-            // $("#mycolor-display").css("background-color", choiceItem.get("color_choice"));
             $("#id_color_choice").val(choiceItem.get("color_choice"));
-            // console.log($("#id_color_choice").val());
+            $("#mycolor-name").change(function (e){
+                choiceItem.set("name", $("#mycolor-name").val());
+                choiceItem.save();
+            });
 
             $(".colorpicker").miniColors({
                 change: function(hex, rgb){
@@ -222,11 +213,6 @@ var ArrayView = Backbone.View.extend({
                 }));
 
         }
-    },
-
-    addPostFetch: function(collection, response) {
-        console.log(this); // == Window /colors/app/
-        this.addAll();
     },
 
     addAll: function() {

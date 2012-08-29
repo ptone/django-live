@@ -96,6 +96,12 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
                     if message['type'] == 'message':
                         # print message
                         io.emit(message['channel'] + ":update", json.loads(message['data']))
+        # we could filter our own ID out, so we don't subscribe to
+        # ourselves. It would depend on whether you want to allow changes
+        # made through other avenues to be reflected
+        # if you don't filter, that means there is no way to avoid
+        # getting your own round tripped updates - which defeates some of the
+        # point of the client side MVC
         greenlet = Greenlet.spawn(subscriber, self, msg['url'])
         # TODO not yet worried about unsubscribing
         # should stash the greenlet in a dict of channels to disconnect from
@@ -118,6 +124,7 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
     def on_color_update(self, msg):
         choice_obj = ColorChoice.objects.get(pk=msg['id'])
         choice_obj.color_choice = msg['color_choice']
+        choice_obj.name = msg['name']
         # this will not scale - need a way to save the model
         # only on last edit in a drag, or on blur
         # can also use client side throttling
@@ -125,6 +132,7 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         choice_obj.save()
         # broadcast is handled through post_save signal
         # which publishes to redis pubsub
+
 
 # Some Debug methods
     def on_testemit(self, msg):
