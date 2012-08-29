@@ -45,7 +45,7 @@ if __name__ == '__main__':
         port = int(os.environ['PORT'])
     except KeyError as e:
         pass
-    print "port", os.environ['PORT']
+    print "port", port
 
     SocketIOServer(
             ('0.0.0.0',  port),
