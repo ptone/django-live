@@ -1,6 +1,7 @@
 import json
 
 from django.db.models.signals import post_save, post_delete
+from django.db.utils import DatabaseError
 
 from redis import Redis
 
@@ -67,9 +68,13 @@ class Collection(object):
 
 collections = {}
 
-blue = Collection('blue', P(hue__range=(171, 264)))
+try:
+    blue = Collection('blue', P(hue__range=(171, 264)))
+    collections['blue'] = blue
+except DatabaseError as exc:
+    # no syncdb yet
+    pass
 
-collections['blue'] = blue
 
 def publish_color(sender, instance, **kwargs):
     """
