@@ -72,8 +72,9 @@ try:
     blue = Collection('blue', P(hue__range=(171, 264)))
     collections['blue'] = blue
 except DatabaseError as exc:
-    # no syncdb yet
-    pass
+    # we will get this if syncdb has not run yet
+    from django.db import connection
+    connection._rollback()
 
 
 def publish_color(sender, instance, **kwargs):
