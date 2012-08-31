@@ -1,5 +1,6 @@
 import json
 
+from django.conf import settings
 from django.db.models.signals import post_save, post_delete
 from django.db.utils import DatabaseError
 
@@ -9,7 +10,7 @@ from predicate import P
 
 from colorpicks.models import ColorChoice
 
-redis_client = Redis()
+redis_client = Redis(connection_pool=settings.REDIS_POOL)
 
 class Collection(object):
 

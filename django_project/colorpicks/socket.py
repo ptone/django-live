@@ -1,3 +1,4 @@
+
 from gevent import monkey; monkey.patch_all()
 from gevent import Greenlet
 import json
@@ -6,6 +7,8 @@ from socketio.mixins import BroadcastMixin
 
 from redis import Redis
 from socketio.namespace import allowed_event_name_regex
+
+from django.conf import settings
 
 from colorpicks.models import ColorChoice
 from colorpicks.publisher import collections
@@ -22,8 +25,7 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
     def __init__(self, *args, **kwargs):
         print "--= --******** ********* *******  --   Namespace init"
         super(ColorsNamespace, self).__init__(*args, **kwargs)
-        # TODO need util function to get redis client configuration from settings
-        self.redis = Redis()
+        self.redis = Redis(settings.REDIS_POOL)
         self.pubsub = self.redis.pubsub()
         self.subscribers = {}
 
