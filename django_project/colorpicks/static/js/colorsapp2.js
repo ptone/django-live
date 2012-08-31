@@ -87,11 +87,11 @@ var ColorChoice = Backbone.Model.extend({
 
 });
 
-var ColorChoiceArray = Backbone.Collection.extend({
+var ConnectedUserColors = Backbone.Collection.extend({
     model: ColorChoice,
     socket:window.socket,
 
-    url: "colors",
+    url: "connected_users",
 
     initialize: function () {
     console.log("initialize collection")
@@ -240,7 +240,7 @@ var ArrayView = Backbone.View.extend({
 
 $(function(){
     console.log("app init started");
-    var colorlist = new ColorChoiceArray();
+    var colorlist = new ConnectedUserColors();
 
     new ArrayView({
         el:$("#color-choices-list"),

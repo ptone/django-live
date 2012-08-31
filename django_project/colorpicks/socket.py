@@ -100,10 +100,6 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
                     if message['type'] == 'message':
                         # print message
                         data = json.loads(message['data'])
-                        # TODO - need to update this to true channel
-                        # ie 'connected_users'
-                        if message['channel'] == 'connected_users':
-                            message['channel'] = 'colors'
                         io.emit(message['channel']+ ":" +
                                 data['action'],
                                 data['data']
@@ -125,20 +121,19 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         # TODO not yet worried about unsubscribing
         # should stash the greenlet in a dict of channels to disconnect from
 
-    def on_colors_read(self, msg):
+    def on_connected_users_read(self, msg):
         """
         backbone collection fetch,
-        socket.io event name 'colors:read'
+        socket.io event name '<collection url>:read'
         used to do the initial population of the backbone collection
         """
-        # data = get_colors_json()
         connected_users = self.redis.smembers('connected_users')
         colors = ColorChoice.objects.filter(identifier__in=connected_users).values(
                 'id',
                 'name',
                 'color_choice')
         data = list(colors)
-        self.emit('colors:create', data)
+        self.emit('connected_users:create', data)
 
     def on_color_update(self, msg):
         choice_obj = ColorChoice.objects.get(pk=msg['id'])
