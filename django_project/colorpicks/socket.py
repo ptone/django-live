@@ -55,10 +55,11 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         data = color_obj.data()
         # we add the ID back here - normally part of the URL/topic
         data['id'] = self.colorid
-        # remove my color from everyone elses collection
-        self.broadcast_event_not_me('color/{}:delete'.format(self.colorid), data)
         # remove it from the current users list
-        self.redis.srem('connected_users', self.identifier)
+        if self.redis.sismember('connected_users', self.identifier):
+            self.redis.publish('connected_users', json.dumps({'action':'delete',
+                'data':data}))
+            self.redis.srem('connected_users', self.identifier)
         self.disconnect(silent=True)
 
     def on_identify(self, msg):
@@ -73,8 +74,11 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         data['id'] = self.colorid
         if not self.redis.sismember('connected_users', self.identifier):
             # don't add me again for multiple tabs
-            self.broadcast_event_not_me('colors:create', data)
+            # self.broadcast_event_not_me('colors:create', data)
+            self.redis.publish('connected_users', json.dumps({'action':'create',
+                'data':data}))
         self.redis.sadd('connected_users', self.identifier)
+        self.on_subscribe({'url':'connected_users'})
 
     def on_subscribe(self, msg):
         """
@@ -95,14 +99,29 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
                 for message in redis_sub.listen():
                     if message['type'] == 'message':
                         # print message
-                        io.emit(message['channel'] + ":update", json.loads(message['data']))
+                        data = json.loads(message['data'])
+                        # TODO - need to update this to true channel
+                        # ie 'connected_users'
+                        if message['channel'] == 'connected_users':
+                            message['channel'] = 'colors'
+                        io.emit(message['channel']+ ":" +
+                                data['action'],
+                                data['data']
+                                )
+
         # we could filter our own ID out, so we don't subscribe to
         # ourselves. It would depend on whether you want to allow changes
         # made through other avenues to be reflected
         # if you don't filter, that means there is no way to avoid
         # getting your own round tripped updates - which defeates some of the
         # point of the client side MVC
-        greenlet = Greenlet.spawn(subscriber, self, msg['url'])
+
+        # print msg
+        if 'channel_type' in msg:
+            greenlet = Greenlet.spawn(subscriber, self, msg['url'],
+                    channel_type=msg['channel_type'])
+        else:
+            greenlet = Greenlet.spawn(subscriber, self, msg['url'])
         # TODO not yet worried about unsubscribing
         # should stash the greenlet in a dict of channels to disconnect from
 

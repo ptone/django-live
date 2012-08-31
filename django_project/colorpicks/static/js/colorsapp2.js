@@ -95,10 +95,18 @@ var ColorChoiceArray = Backbone.Collection.extend({
 
     initialize: function () {
     console.log("initialize collection")
-    _.bindAll(this, 'serverCreate', 'collectionCleanup');
+    _.bindAll(this, 'serverCreate', 'collectionCleanup', 'serverDelete');
     this.ioBind('create', this.serverCreate, this);
-    
+    this.ioBind('delete', this.serverDelete, this);
     },
+
+  serverDelete: function (data) {
+    var exists = this.get(data.id);
+    if (exists) {
+        // maybe remove is tolerant of removing a non-existant model?
+        this.remove(data);
+        }
+  },
 
   serverCreate: function (data) {
     // make sure no duplicates, just in case
