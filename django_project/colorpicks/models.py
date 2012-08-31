@@ -5,6 +5,14 @@ from django.db import models
 def split_count(s, count):
      return [''.join(x) for x in zip(*[list(s[z::count]) for z in range(count)])]
 
+def hex_to_rgb(value):
+    value = value.lstrip('#')
+    lv = len(value)
+    return tuple(int(value[i:i+lv/3], 16) for i in range(0, lv, lv/3))
+
+def rgb_to_hex(rgb):
+    return '#%02x%02x%02x' % rgb
+
 class ColorChoice(models.Model):
     color_choice = models.CharField(max_length=7, default='#000000')
     name = models.CharField(max_length=100, blank=True)
@@ -28,11 +36,15 @@ class ColorChoice(models.Model):
         return {'color_choice':self.color_choice, 'name':self.name}
 
     def to_hsv(self):
-        r, g, b = [int(s, 16) for s in split_count(self.color_choice.lstrip('#'), 2)]
-        return colorsys.rgb_to_hsv(r, g, b)
+        # r, g, b = [int(s, 16)/255.0 for s in split_count(self.color_choice.lstrip('#'), 2)]
+        r, g, b = hex_to_rgb(self.color_choice)
+        return colorsys.rgb_to_hsv(r/255.0, g/255.0, b/255.0)
 
     def save(self,  *args, **kwargs):
-        self.hue, self.saturation, self.brightness = self.to_hsv()
+        hue, saturation, brightness = self.to_hsv()
+        self.hue = hue * 365
+        self.saturation = saturation * 100
+        self.brightness = brightness * 100
         super(ColorChoice, self).save(*args, **kwargs)
 
 

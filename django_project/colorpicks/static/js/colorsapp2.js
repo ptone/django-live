@@ -91,20 +91,30 @@ var ConnectedUserColors = Backbone.Collection.extend({
     model: ColorChoice,
     socket:window.socket,
 
-    url: "connected_users",
+    // url: "connected_users",
+    url: "blue",
 
     initialize: function () {
-    console.log("initialize collection")
-    _.bindAll(this, 'serverCreate', 'collectionCleanup', 'serverDelete');
-    this.ioBind('create', this.serverCreate, this);
-    this.ioBind('delete', this.serverDelete, this);
+        console.log("initialize collection")
+        _.bindAll(this, 'serverCreate', 'collectionCleanup', 'serverDelete');
+        this.ioBind('create', this.serverCreate, this);
+        this.ioBind('delete', this.serverDelete, this);
+        socket.emit("subscribe", {url:this.url});
     },
 
   serverDelete: function (data) {
+      console.log("collection serverDelet");
+      console.log(data);
+    // seems to be buggy here - color not always detected as part of collection
+    console.log(this.size());
+    console.log(this);
     var exists = this.get(data.id);
     if (exists) {
         // maybe remove is tolerant of removing a non-existant model?
         this.remove(data);
+        } else {
+          console.log("couldn't color in collection");
+          this.remove(data);
         }
   },
 
@@ -119,6 +129,11 @@ var ConnectedUserColors = Backbone.Collection.extend({
       data.fromServer = true;
       exists.set(data);
     }
+  },
+
+  reset: function () {
+      console.log("reset collection" + this.url);
+      console.log(this.size());
   },
 
   collectionCleanup: function (callback) {
@@ -171,7 +186,7 @@ var MyColorChoiceView = Backbone.View.extend({
             this.model.set("name", $("#mycolor-name").val());
             this.model.save();
         }, this));
-
+        console.log("done rendering mycolor");
         return this;},
 
 });
@@ -184,7 +199,7 @@ var ArrayView = Backbone.View.extend({
         this.collection.on('add', this.addOne, this);
         this.collection.on('remove', this.removeOne, this);
         // array.on('all', this.render, this);
-        this.collection.on("reset", function() { this.addAll() }, this);
+        //this.collection.on("reset", function() { this.addAll() }, this);
         console.log("Fetching choices");
         this.collection.fetch();
     },
@@ -225,6 +240,7 @@ var ArrayView = Backbone.View.extend({
 
     addAll: function() {
         console.log(this); // == Window /colors/app/
+        console.log(this.url); // == Window /colors/app/
         console.log("in addAll")
         console.log(this.collection.length)
         this.collection.each(this.addOne.bind(this));

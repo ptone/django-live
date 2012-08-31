@@ -8,6 +8,7 @@ from redis import Redis
 from socketio.namespace import allowed_event_name_regex
 
 from colorpicks.models import ColorChoice
+from colorpicks.publisher import collections
 from colorpicks.utils import get_colors_json
 
 class ColorsNamespace(BaseNamespace, BroadcastMixin):
@@ -19,20 +20,32 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
 
     """
     def __init__(self, *args, **kwargs):
+        print "--= --******** ********* *******  --   Namespace init"
         super(ColorsNamespace, self).__init__(*args, **kwargs)
         # TODO need util function to get redis client configuration from settings
         self.redis = Redis()
         self.pubsub = self.redis.pubsub()
+        self.subscribers = {}
 
     def process_event(self, packet):
         """
         This method is overridden here because backbone.iobind uses ':' in the
         event names, and gevent-socketio only allows valid python names, so we
         convert to _
+
+        we also take any collection fetch - and route it to a single method
+        on self.
         """
         args = packet['args']
         # Special case here, where we want to allow ":" as sent by
         # backbone.iobind
+        print packet
+        if ':' in packet['name']:
+            url, action = packet['name'].split(':')
+            print collections
+            if url in collections:
+                # TODO perhaps call through the namespace ACL machinery
+                return self.on_fetch_collection(collections[url])
         name = packet['name'].replace(":","_")
         if not allowed_event_name_regex.match(name):
             self.error("unallowed_event_name",
@@ -80,6 +93,19 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         self.redis.sadd('connected_users', self.identifier)
         self.on_subscribe({'url':'connected_users'})
 
+    def on_fetch_collection(self, collection):
+        # TODO currently we don't fetch the data for our own color in the best
+        # way - so we need to make sure we add it into any collection that is fetched
+        #
+        collection_data = collection.fetch()
+        current_ids = [d['id'] for d in collection_data]
+        if self.colorid not in current_ids:
+            self_data = ColorChoice.objects.get(id=self.colorid).data()
+            self_data['id'] = self.colorid
+            collection_data.append(self_data)
+        print collection.name, collection_data
+        self.emit('{}:create'.format(collection.name), collection_data)
+
     def on_subscribe(self, msg):
         """
         subscribe to a channel, sent by backbone for each model instantiated
@@ -98,7 +124,7 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
             while io.socket.connected:
                 for message in redis_sub.listen():
                     if message['type'] == 'message':
-                        # print message
+                        print id(self), message
                         data = json.loads(message['data'])
                         io.emit(message['channel']+ ":" +
                                 data['action'],
@@ -113,11 +139,11 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         # point of the client side MVC
 
         # print msg
-        if 'channel_type' in msg:
-            greenlet = Greenlet.spawn(subscriber, self, msg['url'],
-                    channel_type=msg['channel_type'])
-        else:
-            greenlet = Greenlet.spawn(subscriber, self, msg['url'])
+        url = msg['url']
+        if url not in self.subscribers:
+            greenlet = Greenlet.spawn(subscriber, self, url)
+            self.subscribers[url] = greenlet
+            print 'subscribers so far: ', len(self.subscribers)
         # TODO not yet worried about unsubscribing
         # should stash the greenlet in a dict of channels to disconnect from
 
@@ -143,6 +169,7 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         # only on last edit in a drag, or on blur
         # can also use client side throttling
         # but then need another way to notify other clients
+        print 'saving', choice_obj
         choice_obj.save()
         # broadcast is handled through post_save signal
         # which publishes to redis pubsub
