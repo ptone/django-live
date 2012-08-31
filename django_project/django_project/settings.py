@@ -1,5 +1,8 @@
 import os
+from urlparse import urlparse
+
 import dj_database_url
+import redis
 
 DEBUG = False
 TEMPLATE_DEBUG = DEBUG
@@ -12,8 +15,11 @@ MANAGERS = ADMINS
 
 site_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-DATABASES = {'default': dj_database_url.config(default='postgres://localhost/livecolor')}
-DATABASES = {'default': dj_database_url.config(default='postgres://hotthfladvbrzs:xXY24Biohmn2WJvjqThYr6dtWS@ec2-107-22-169-241.compute-1.amazonaws.com:5432/db2lj6efnl5li3')}
+db_url = os.getenv('DATABASE_URL', None)
+if not db_url:
+    db_url = os.getenv('HEROKU_POSTGRESQL_GREEN_URL', 'postgres://localhost/livecolor')
+
+DATABASES = {'default': dj_database_url.config(default=db_url)}
 
 # DATABASES = {
     # 'default': {
@@ -172,3 +178,24 @@ LOGGING = {
 
 APPEND_SLASH = False
 DEBUG_TOOLBAR_CONFIG = {'INTERCEPT_REDIRECTS':False}
+
+
+
+REDIS_URL = os.getenv('REDISTOGO_URL', 'redis://localhost')
+REDIS_MAX_CONNECTIONS = 10
+
+url = urlparse(REDIS_URL)
+
+try:
+    db = int(url.path.replace('/', ''))
+except (AttributeError, ValueError):
+    db = 0
+
+
+REDIS_POOL = redis.ConnectionPool(
+        host=url.hostname,
+        port=url.port,
+        db=0,
+        password=url.password)
+
+
