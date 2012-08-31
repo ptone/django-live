@@ -13,6 +13,7 @@ MANAGERS = ADMINS
 site_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 DATABASES = {'default': dj_database_url.config(default='postgres://localhost/livecolor')}
+DATABASES = {'default': dj_database_url.config(default='postgres://hotthfladvbrzs:xXY24Biohmn2WJvjqThYr6dtWS@ec2-107-22-169-241.compute-1.amazonaws.com:5432/db2lj6efnl5li3')}
 
 # DATABASES = {
     # 'default': {
