@@ -100,6 +100,7 @@ try:
         brightness__range=(30, 100)))
 
     collections['blue'] = blue
+    collections['all'] = Collection('all', P())
 except DatabaseError as exc:
     # we will get this if syncdb has not run yet
     from django.db import connection

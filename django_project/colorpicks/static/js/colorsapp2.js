@@ -84,15 +84,16 @@ var ColorChoice = Backbone.Model.extend({
 
 });
 
-var ConnectedUserColors = Backbone.Collection.extend({
+var ColorCollection = Backbone.Collection.extend({
     model: ColorChoice,
     socket:window.socket,
 
     // url: "connected_users",
-    url: "blue",
+    // url: "all",
 
-    initialize: function () {
+    initialize: function (curl) {
         console.log("initialize collection")
+        this.url = curl,
         _.bindAll(this, 'serverCreate', 'collectionCleanup', 'serverDelete');
         this.ioBind('create', this.serverCreate, this);
         this.ioBind('delete', this.serverDelete, this);
@@ -200,16 +201,43 @@ var ArrayView = Backbone.View.extend({
         console.log("Fetching choices");
         this.collection.fetch();
         console.log("settings up checkbox");
+
+        // set up the connected user filter
         $("#current-user-filter").click(_.bind(function(e) {
-            console.log("checkbox clicked")
+            console.log("checkbox clicked");
             var ischecked = $("#current-user-filter").is(":checked");
             window.socket.emit("currentuser", {"showonly": ischecked});
-            // this.collection.collectionCleanup();
-            this.collection.reset();
+            // this.collection.reset();
             // console.log(this.collection);
             this.$el.empty();
             this.collection.fetch()
-            // this.addAll();
+            // this.render();
+        }, this));
+
+        // change collection
+        $(".collection-button").click(_.bind(function(e) {
+            console.log("collection button clicked");
+            // console.log(e);
+            var new_url = $(e.target).val();
+            this.$el.empty();
+
+// This is one way of handling it, to creat a new collection
+            this.collection = new ColorCollection(new_url);
+            // this.collection.fetch();
+            //
+            window.socket.emit('setcollection', {'url':new_url});
+            console.log("new url for collection: " + this.collection.url);
+// this is another way - trying to swap out the url
+            // this.collection.url = new_url;
+            // this.collection.reset();
+
+            this.collection.fetch({'success':_.bind(
+                    function(collection, response){
+                        console.log("fetch sucess callback in colleciton change");
+                        this.render();
+                    }, this)});
+            window.setTimeout(function(){}, 1000);
+            console.log(this.collection.models);
             this.render();
         }, this));
     },
@@ -266,7 +294,7 @@ var ArrayView = Backbone.View.extend({
 
 $(function(){
     console.log("app init started");
-    var colorlist = new ConnectedUserColors();
+    var colorlist = new ColorCollection('all');
 
     new ArrayView({
         el:$("#color-choices-list"),

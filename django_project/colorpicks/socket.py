@@ -28,7 +28,7 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         self.pubsub = self.redis.pubsub()
         self.subscribers = {}
         self.show_only_connected_users = True
-        self.collection = 'blue' #'all'
+        self.collection = 'all' #'all'
 
     def process_event(self, packet):
         """
@@ -216,8 +216,18 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         print 'currentuser', msg
         original_value = self.show_only_connected_users
         self.show_only_connected_users = msg['showonly']
+        # TODO remove individual color model subscriptions as appropriate
         # if self.show_only_connected_users != original_value:
             # self.on_fetch_collection(collections[self.collection])
+
+    def on_setcollection(self, msg):
+        # TODO set self. collection
+        print "setting collection", msg
+        self.collection = msg['url']
+        self.on_subscribe(msg)
+        # then unsub greenlets
+        # fetch of new collection handled by client
+        pass
 
 # Some Debug methods
     def on_testemit(self, msg):
