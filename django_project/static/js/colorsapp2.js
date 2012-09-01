@@ -266,6 +266,12 @@ $(function(){
         el:$("#color-choices-list"),
         collection: colorlist,
     });
+    console.log("settings up checkbox");
+    $("#current-user-filter").click(function(e) {
+        console.log("checkbox clicked")
+        var ischecked = $("#current-user-filter").is(":checked");
+        window.socket.emit("currentuser", {"showonly": ischecked});
+    });
 
-    console.log("app init done");
+    console.log("app init done done");
     });

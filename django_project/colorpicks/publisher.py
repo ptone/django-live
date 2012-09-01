@@ -12,6 +12,17 @@ from colorpicks.models import ColorChoice
 
 redis_client = Redis(connection_pool=settings.REDIS_POOL)
 
+# reset current users at server startup
+connected_users= tuple(redis_client.smembers('connected_users'))
+print "connected_usersusers at server startup ", connected_users
+# this method not working ERR wrong number of arguments for 'srem' command
+if connected_users:
+    redis_client.srem('connected_users', *connected_users)
+# for cu in connected_users:
+    # redis_client.srem('connected_users', cu)
+connected_users = redis_client.smembers('connected_users')
+print "connected_usersusers at server startup end",connected_users
+
 class Collection(object):
 
     def __init__(self, name, predicate):

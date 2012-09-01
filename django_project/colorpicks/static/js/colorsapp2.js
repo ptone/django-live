@@ -51,16 +51,9 @@ var ColorChoice = Backbone.Model.extend({
         };
     },
 
-    // this is being removed because of DRF not wanting the ID back
-    // toJSON: function() {
-        // var data = _.clone(this.attributes);
-        // delete data.id;
-        // return data
-    // },
-
-    // save: $.throttle(500, function(){
-        // Backbone.Model.prototype.save.call(this);
-    // }),
+    save: $.throttle(500, function(){
+        Backbone.Model.prototype.save.call(this);
+    }),
 
     serverChange: function (data) {
     // Useful to prevent loops when dealing with client-side updates (ie: forms).
@@ -135,10 +128,10 @@ var ConnectedUserColors = Backbone.Collection.extend({
     }
   },
 
-  reset: function () {
-      console.log("reset collection" + this.url);
-      console.log(this.size());
-  },
+  // reset: function () {
+      // console.log("reset collection" + this.url);
+      // console.log(this.size());
+  // },
 
   collectionCleanup: function (callback) {
     this.ioUnbindAll();
@@ -206,6 +199,19 @@ var ArrayView = Backbone.View.extend({
         //this.collection.on("reset", function() { this.addAll() }, this);
         console.log("Fetching choices");
         this.collection.fetch();
+        console.log("settings up checkbox");
+        $("#current-user-filter").click(_.bind(function(e) {
+            console.log("checkbox clicked")
+            var ischecked = $("#current-user-filter").is(":checked");
+            window.socket.emit("currentuser", {"showonly": ischecked});
+            // this.collection.collectionCleanup();
+            this.collection.reset();
+            // console.log(this.collection);
+            this.$el.empty();
+            this.collection.fetch()
+            // this.addAll();
+            this.render();
+        }, this));
     },
 
     addOne: function(choiceItem) {

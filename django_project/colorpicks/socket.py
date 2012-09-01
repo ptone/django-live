@@ -12,7 +12,6 @@ from django.conf import settings
 
 from colorpicks.models import ColorChoice
 from colorpicks.publisher import collections
-from colorpicks.utils import get_colors_json
 
 class ColorsNamespace(BaseNamespace, BroadcastMixin):
     """
@@ -28,6 +27,8 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         self.redis = Redis(connection_pool=settings.REDIS_POOL)
         self.pubsub = self.redis.pubsub()
         self.subscribers = {}
+        self.show_only_connected_users = True
+        self.collection = 'blue' #'all'
 
     def process_event(self, packet):
         """
@@ -71,10 +72,10 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         # we add the ID back here - normally part of the URL/topic
         data['id'] = self.colorid
         # remove it from the current users list
-        if self.redis.sismember('connected_users', self.identifier):
+        if self.redis.sismember('connected_users', self.colorid):
             self.redis.publish('connected_users', json.dumps({'action':'delete',
                 'data':data}))
-            self.redis.srem('connected_users', self.identifier)
+            self.redis.srem('connected_users', self.colorid)
         self.disconnect(silent=True)
 
     def on_identify(self, msg):
@@ -87,12 +88,14 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         data = color_obj.data()
         # we add the ID back here - normally part of the URL/topic
         data['id'] = self.colorid
-        if not self.redis.sismember('connected_users', self.identifier):
+        if not self.redis.sismember('connected_users', self.colorid):
             # don't add me again for multiple tabs
             # self.broadcast_event_not_me('colors:create', data)
-            self.redis.publish('connected_users', json.dumps({'action':'create',
-                'data':data}))
-        self.redis.sadd('connected_users', self.identifier)
+            print "publishing that user has joined ", self.colorid
+            self.redis.publish('connected_users', json.dumps(
+                {'action':'create','data':data}))
+            self.redis.sadd('connected_users', self.colorid)
+        print 'currently connected users after this join ', self.redis.smembers('connected_users')
         self.on_subscribe({'url':'connected_users'})
 
     def on_fetch_collection(self, collection):
@@ -100,12 +103,19 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         # way - so we need to make sure we add it into any collection that is fetched
         #
         collection_data = collection.fetch()
+        if self.show_only_connected_users:
+            print 'filtering to connected_users'
+            print [d['id'] for d in collection_data]
+            connected_users= self.redis.smembers('connected_users')
+            print 'connected_usersredis members',connected_users
+            collection_data = [d for d in collection_data if str(d['id']) in connected_users]
+            print 'new collection data', collection_data
         current_ids = [d['id'] for d in collection_data]
         if self.colorid not in current_ids:
             self_data = ColorChoice.objects.get(id=self.colorid).data()
             self_data['id'] = self.colorid
             collection_data.append(self_data)
-        print collection.name, collection_data
+        print 'end of fetch collection ', collection.name, collection_data
         self.emit('{}:create'.format(collection.name), collection_data)
 
     def on_subscribe(self, msg):
@@ -119,19 +129,36 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
 
             This will run in a greenlet, and blocks waiting for publish
             messages from other redis clients. One source for the publish
-            events is a bridge to Django's signals - see colorpicks.publisher
+            events is a bridge to Django's signals - see colorpicks.publisher.
+
+            When a message is received on the redis channel, it emits an event
+            to backbone over socketio
             """
             redis_sub = self.redis.pubsub()
             redis_sub.subscribe(topic)
             while io.socket.connected:
                 for message in redis_sub.listen():
-                    if message['type'] == 'message':
-                        print id(self), message
-                        data = json.loads(message['data'])
-                        io.emit(message['channel']+ ":" +
-                                data['action'],
-                                data['data']
-                                )
+                    if message['type'] != 'message':
+                        print 'rejecting ', message
+                        return
+                    print 'pubsub message for ', id(self), message
+                    data = json.loads(message['data'])
+                    colorid = str(data['data'].id)
+                    chan = message['channel']
+                    if chan == 'connected_users':
+                        print 'subscriber hearing of join ', message
+                    if (data['action'] == 'update' and
+                            self.show_only_connected_users and not
+                            self.redis.sismember('connected_users', colorid)):
+                        return
+                    if (chan == 'connected_users' and
+                            self.redis.sismember(self.collection)):
+                        # emit as if this were just added to the collection
+                        chan = self.collection
+                    io.emit(chan + ":" +
+                            data['action'],
+                            data['data']
+                            )
 
         # we could filter our own ID out, so we don't subscribe to
         # ourselves. It would depend on whether you want to allow changes
@@ -142,10 +169,14 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
 
         # print msg
         url = msg['url']
+        print 'subscribe request for ', url
         if url not in self.subscribers:
+            print 'subscribigng to ', url
             greenlet = Greenlet.spawn(subscriber, self, url)
             self.subscribers[url] = greenlet
-            print 'subscribers so far: ', len(self.subscribers)
+            print 'subscriber greenlets so far: ', len(self.subscribers)
+        else:
+            print 'already subscribed do ', url
         # TODO not yet worried about unsubscribing
         # should stash the greenlet in a dict of channels to disconnect from
 
@@ -156,7 +187,7 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         used to do the initial population of the backbone collection
         """
         connected_users = self.redis.smembers('connected_users')
-        colors = ColorChoice.objects.filter(identifier__in=connected_users).values(
+        colors = ColorChoice.objects.filter(id__in=[int(i) for i in connected_users]).values(
                 'id',
                 'name',
                 'color_choice')
@@ -176,10 +207,17 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         # broadcast is handled through post_save signal
         # which publishes to redis pubsub
 
+    def on_currentuser(self, msg):
+        print 'currentuser', msg
+        original_value = self.show_only_connected_users
+        self.show_only_connected_users = msg['showonly']
+        # if self.show_only_connected_users != original_value:
+            # self.on_fetch_collection(collections[self.collection])
 
 # Some Debug methods
     def on_testemit(self, msg):
         print 'testemit'
+
 
     def recv_message(self, message):
         print "PING!!!", message
