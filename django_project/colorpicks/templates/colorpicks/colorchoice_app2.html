@@ -1,13 +1,23 @@
 {% extends "base.html" %}
 {% block main %}
-<h2>My Color (app 2)</h2>
-<div>
+<h2>ColorLand - Live</h2>
+<div class="row">
+<div class="span6 offset3">
     <div id="mycolor"></div>
     <input class="colorpicker" id="id_color_choice" name="color_choice" value="" type="hidden">
+    There is no submit button - just enter a label, then click on the large swatch above to change your color.
+    Play with choosing whose colors to see in realtime below.
 </div>
-<ul id="color-choices-list">
+</div>
+<hr>
+<div class="row">
+    <div class="span2">
+        <label class="checkbox"><input id="current-user-filter" type="checkbox">Show only connected users</label>
+        </div>
+</div>
+<hr>
+<ul id="color-choices-list" class="thumbnails">
 </ul >
-
 {% endblock %}
 {% block extrascripts %}
 
@@ -23,20 +33,20 @@
 <script src="{{ STATIC_URL }}js/libs/jquery.ba-throttle-debounce.min.js"></script>
 
 <script type="text/template" id="item-template">
-    <div id="color-<%= id %>">
-      <%= name %>
+    <div id="color-<%= id %>" class="color-choice">
+      
       <div class="color-box" style="
           background-color:<%= color_choice %>;
-            height: 20px;
-            width: 50px;"></div>
+"></div>
+            <%= name %>
         </div>
   </script>
 
   <script type="text/template" id="mychoice-template">
+      <div class="my-color-entry">
     <label>Name or Label:</label><input id="mycolor-name" type="text" value="<%= name %>" name="name">
-    <div id="mycolor-display" style="background-color:<%= color_choice %>;
-        height: 200px;
-        width: 600px;"></div>
+    <div id="mycolor-display" style="background-color:<%= color_choice %>;"></div>
+    </div>
   </script>
 
 <script src="{{ STATIC_URL }}js/colorsapp2.js"></script>
