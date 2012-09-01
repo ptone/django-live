@@ -4,7 +4,11 @@ from urlparse import urlparse
 import dj_database_url
 import redis
 
-DEBUG = False
+debug_env = os.getenv('django_debug', '')
+if debug_env:
+    DEBUG = True
+else:
+    DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
