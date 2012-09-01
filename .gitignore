@@ -6,4 +6,3 @@ dev.db
 *.rdb
 venv
 *.pyc
-static/
