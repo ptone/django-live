@@ -25,7 +25,7 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
     def __init__(self, *args, **kwargs):
         print "--= --******** ********* *******  --   Namespace init"
         super(ColorsNamespace, self).__init__(*args, **kwargs)
-        self.redis = Redis(settings.REDIS_POOL)
+        self.redis = Redis(connection_pool=settings.REDIS_POOL)
         self.pubsub = self.redis.pubsub()
         self.subscribers = {}
 
