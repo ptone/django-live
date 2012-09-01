@@ -14,7 +14,7 @@ def rgb_to_hex(rgb):
     return '#%02x%02x%02x' % rgb
 
 class ColorChoice(models.Model):
-    color_choice = models.CharField(max_length=7, default='#000000')
+    color_choice = models.CharField(max_length=7, default='#c9d4ca')
     name = models.CharField(max_length=100, blank=True)
     identifier = models.CharField(max_length=100)
     email = models.CharField(max_length=100, default='', blank=True)
