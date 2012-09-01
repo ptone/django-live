@@ -119,6 +119,7 @@ def publish_color(sender, instance, **kwargs):
 
     channel = 'color/{}'.format(instance.pk)
     data = instance.data()
+    data['id'] = instance.id
     print 'publishing post_save for model to redis channel for model'
     redis_client.publish(channel, json.dumps({'action':'update', 'data':data}))
 

@@ -136,14 +136,19 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
             """
             redis_sub = self.redis.pubsub()
             redis_sub.subscribe(topic)
+
             while io.socket.connected:
+                # TODO the nesting dictionaries with the key 'data'
+                # is highly problematic now - need to fix
                 for message in redis_sub.listen():
                     if message['type'] != 'message':
                         print 'rejecting ', message
-                        return
+                        continue
                     print 'pubsub message for ', id(self), message
                     data = json.loads(message['data'])
-                    colorid = str(data['data'].id)
+                    print 'message data: ', data
+                    colorid = str(data['data']['id'])
+
                     chan = message['channel']
                     if chan == 'connected_users':
                         print 'subscriber hearing of join ', message
@@ -152,7 +157,7 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
                             self.redis.sismember('connected_users', colorid)):
                         return
                     if (chan == 'connected_users' and
-                            self.redis.sismember(self.collection)):
+                            self.redis.sismember(self.collection, colorid)):
                         # emit as if this were just added to the collection
                         chan = self.collection
                     io.emit(chan + ":" +
