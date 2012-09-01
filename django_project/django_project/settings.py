@@ -181,7 +181,7 @@ DEBUG_TOOLBAR_CONFIG = {'INTERCEPT_REDIRECTS':False}
 
 
 
-REDIS_URL = os.getenv('REDISTOGO_URL', 'redis://localhost')
+REDIS_URL = os.getenv('REDISTOGO_URL', 'redis://localhost:6379')
 REDIS_MAX_CONNECTIONS = 10
 
 url = urlparse(REDIS_URL)
@@ -196,6 +196,8 @@ REDIS_POOL = redis.ConnectionPool(
         host=url.hostname,
         port=url.port,
         db=0,
-        password=url.password)
+        password=url.password,
+        max_connections=REDIS_MAX_CONNECTIONS
+        )
 
 
