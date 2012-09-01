@@ -29,9 +29,10 @@ class SetColorIdMiddleware(object):
                     httponly=False)
         else:
             request.session.flush()
-            if request.path == '/colors/app':
+            return redirect(request.path)
+            # if request.path == '/colors/app':
                 # This is sort of a hack - we only want to do a redirect
                 # for the conventional app in this demo - the other apps
                 # will use more dynamic methods
-                return redirect('/colors/app')
+                # return redirect('/colors/app')
         return response

@@ -12,9 +12,12 @@ window.log = function(){
 };
 
 // window.socket = io.connect(window.socket_endpoint);
+// console.log("windo info");
+// console.log(window.location.host);
 // window.socket = io.connect('http://localhost:8000');
-window.socket = io.connect('http://route.heroku.com:24722')
-log(window.socket);
+window.socket = io.connect("http://" + window.location.host);
+// window.socket = io.connect('http://route.heroku.com:24722')
+// log(window.socket);
 
 socket.emit("testemit", {test:"data"});
 socket.emit("identify", {'identifier':$.cookie("sessionid")});

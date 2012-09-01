@@ -20,17 +20,25 @@ class Collection(object):
         self.reset()
 
     def reset(self):
+        print 'collection reset for ', self.name
         current_members = ColorChoice.objects.filter(self.predicate)
+        print current_members.count(), " current members"
         for member in current_members:
             self.update(member)
-        current_ids = set([m.id for m in current_members])
+        current_ids = set([str(m.id) for m in current_members])
+        print 'current ids ', current_ids
         redis_members = redis_client.smembers(self.name)
+        print 'redis members', redis_members
         removed_ids = redis_members - current_ids
+        print 'removing ids ', removed_ids
         if len(removed_ids):
-            removed_objects = ColorChoice.objects.filter(id__in=removed_ids)
+            removed_objects = ColorChoice.objects.filter(
+                    id__in=[int(i) for i in removed_ids])
+            print removed_objects
             for obj in removed_objects:
                 self.remove(obj)
-
+            # remove any stale IDs of items no in the DB
+            redis_client.srem(self.name, *tuple(removed_ids))
 
     def add(self, instance):
          if not redis_client.sismember(self.name, instance.id):
@@ -44,12 +52,16 @@ class Collection(object):
 
 
     def update(self, instance):
+        print "updating for ", self.name, instance
         if instance in self.predicate:
+            print 'adding'
             self.add(instance)
         else:
+            print 'removing'
             self.remove(instance)
 
     def remove(self, instance):
+        print 'removing', instance
         if redis_client.sismember(self.name, instance.id):
             # should no longer be a member, remove
             redis_client.srem(self.name, instance.id)
@@ -70,7 +82,11 @@ class Collection(object):
 collections = {}
 
 try:
-    blue = Collection('blue', P(hue__range=(171, 264)))
+    blue = Collection('blue', P(
+        hue__range=(171, 264),
+        saturation__range=(30,100),
+        brightness__range=(30, 100)))
+
     collections['blue'] = blue
 except DatabaseError as exc:
     # we will get this if syncdb has not run yet
@@ -86,6 +102,7 @@ def publish_color(sender, instance, **kwargs):
     update the client as soon as the model is saved
     """
     for collection in collections.values():
+        print "update ", collection.name, instance
         collection.update(instance)
 
     channel = 'color/{}'.format(instance.pk)
