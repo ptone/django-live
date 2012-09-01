@@ -53,7 +53,8 @@ class Collection(object):
 
     def update(self, instance):
         print "updating for ", self.name, instance
-        if instance in self.predicate:
+        # new versions of django-predicate allow for an __in__ test
+        if self.predicate.eval(instance):
             print 'adding'
             self.add(instance)
         else:
