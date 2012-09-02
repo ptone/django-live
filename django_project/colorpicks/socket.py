@@ -29,6 +29,8 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         self.subscribers = {}
         self.show_only_connected_users = True
         self.collection = 'all' #'all'
+        self.on_subscribe({'url':self.collection})
+        self.on_subscribe({'url':'connected_users'})
 
     def process_event(self, packet):
         """
@@ -42,11 +44,15 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         args = packet['args']
         # Special case here, where we want to allow ":" as sent by
         # backbone.iobind
-        print packet
+        print id(self), "socketio event: ", packet
         if ':' in packet['name']:
             url, action = packet['name'].split(':')
-            print collections
+            # print collections
+            # hack - we manage what the current collection here on self
+            # instead of swapping it out in backbone as probably should
+            # be done
             if url in collections:
+                url = self.collection
                 # TODO perhaps call through the namespace ACL machinery
                 return self.on_fetch_collection(collections[url])
         name = packet['name'].replace(":","_")
@@ -66,6 +72,7 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         # close one tab - and your removed - because sessionid is shared between
         # windows/tabs, need either a reference counter, or a window specific
         # token
+        print id(self), ' disconnecting'
         color_obj = ColorChoice.objects.get(identifier=self.identifier)
         self.colorid = color_obj.id
         data = color_obj.data()
@@ -76,6 +83,7 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
             self.redis.publish('connected_users', json.dumps({'action':'delete',
                 'data':data}))
             self.redis.srem('connected_users', self.colorid)
+        self.clear_subscribers()
         self.disconnect(silent=True)
 
     def on_identify(self, msg):
@@ -91,11 +99,11 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         if not self.redis.sismember('connected_users', self.colorid):
             # don't add me again for multiple tabs
             # self.broadcast_event_not_me('colors:create', data)
-            print "publishing that user has joined ", self.colorid
+            # print "publishing that user has joined ", self.colorid
             self.redis.publish('connected_users', json.dumps(
                 {'action':'create','data':data}))
             self.redis.sadd('connected_users', self.colorid)
-        print 'currently connected users after this join ', self.redis.smembers('connected_users')
+        # print 'currently connected users after this join ', self.redis.smembers('connected_users')
         self.on_subscribe({'url':'connected_users'})
 
     def on_fetch_collection(self, collection):
@@ -104,19 +112,25 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         #
         collection_data = collection.fetch()
         if self.show_only_connected_users:
-            print 'filtering to connected_users'
-            print [d['id'] for d in collection_data]
+            # print 'filtering to connected_users'
+            # print [d['id'] for d in collection_data]
             connected_users= self.redis.smembers('connected_users')
-            print 'connected_usersredis members',connected_users
+            # print 'connected_usersredis members',connected_users
             collection_data = [d for d in collection_data if str(d['id']) in connected_users]
-            print 'new collection data', collection_data
+            # print 'new collection data', collection_data
         current_ids = [d['id'] for d in collection_data]
         if self.colorid not in current_ids:
             self_data = ColorChoice.objects.get(id=self.colorid).data()
             self_data['id'] = self.colorid
             collection_data.append(self_data)
-        print 'end of fetch collection ', collection.name, collection_data
-        self.emit('{}:create'.format(collection.name), collection_data)
+        # print 'end of fetch collection ', collection.name, collection_data
+        # This is currently a hack - I handle collection
+        # swapping here, because I can't get seem to swap a 
+        # collection out on a backbone view
+
+        # self.emit('{}:create'.format(collection.name), collection_data)
+        print id(self), " emitting collection:create data ", collection_data
+        self.emit('{}:create'.format('all'), collection_data)
 
     def on_subscribe(self, msg):
         """
@@ -142,16 +156,23 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
                 # is highly problematic now - need to fix
                 for message in redis_sub.listen():
                     if message['type'] != 'message':
-                        print 'rejecting ', message
+                        # print 'rejecting ', message
                         continue
-                    print 'pubsub message for ', id(self), message
+                    print id(self), ' pubsub ', message
+
                     data = json.loads(message['data'])
-                    print 'message data: ', data
+                    if data['action'] == 'unsub':
+                        redis_sub.unsubscribe(topic)
+                        # ends the greenlet
+                        return
+
+                    # print 'message data: ', data
                     colorid = str(data['data']['id'])
 
                     chan = message['channel']
                     if chan == 'connected_users':
-                        print 'subscriber hearing of join ', message
+                        # print 'subscriber hearing of join ', message
+                        pass
                     if (data['action'] == 'update' and
                             self.show_only_connected_users and not
                             self.redis.sismember('connected_users', colorid)):
@@ -160,10 +181,24 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
                             self.redis.sismember(self.collection, colorid)):
                         # emit as if this were just added to the collection
                         chan = self.collection
+
+                    if not chan.startswith('color/'):
+                        # again - hack to manage collection state on self here
+                        chan = 'all'
+                    print id(self), 'emitting: ', chan, data['action'], data['data']
                     io.emit(chan + ":" +
                             data['action'],
                             data['data']
                             )
+                    if data['action'] == 'delete':
+                        # send an extra delete event for the model also
+                        # as the backbone collection seems buggy
+                        io.emit('color/{}:delete'.format(data['data']['id']),
+                                data['data'])
+                        io.emit(chan + ":" +
+                                data['action'],
+                                list(data['data'])
+                                )
 
         # we could filter our own ID out, so we don't subscribe to
         # ourselves. It would depend on whether you want to allow changes
@@ -174,14 +209,15 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
 
         # print msg
         url = msg['url']
-        print 'subscribe request for ', url
+        # print 'subscribe request for ', url
         if url not in self.subscribers:
-            print 'subscribigng to ', url
+            # print 'subscribigng to ', url
             greenlet = Greenlet.spawn(subscriber, self, url)
             self.subscribers[url] = greenlet
-            print 'subscriber greenlets so far: ', len(self.subscribers)
+            # print 'subscriber greenlets so far: ', len(self.subscribers)
         else:
-            print 'already subscribed do ', url
+            pass
+            # print 'already subscribed do ', url
         # TODO not yet worried about unsubscribing
         # should stash the greenlet in a dict of channels to disconnect from
 
@@ -191,6 +227,7 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         socket.io event name '<collection url>:read'
         used to do the initial population of the backbone collection
         """
+        print "- -8 -8 -8 -8 - 8- 8- 8 -8 - 8 Don't think this is being called"
         connected_users = self.redis.smembers('connected_users')
         colors = ColorChoice.objects.filter(id__in=[int(i) for i in connected_users]).values(
                 'id',
@@ -207,27 +244,37 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         # only on last edit in a drag, or on blur
         # can also use client side throttling
         # but then need another way to notify other clients
-        print 'saving', choice_obj
+        # print 'saving', choice_obj
         choice_obj.save()
         # broadcast is handled through post_save signal
         # which publishes to redis pubsub
 
     def on_currentuser(self, msg):
-        print 'currentuser', msg
+        # print 'currentuser', msg
         original_value = self.show_only_connected_users
         self.show_only_connected_users = msg['showonly']
         # TODO remove individual color model subscriptions as appropriate
         # if self.show_only_connected_users != original_value:
             # self.on_fetch_collection(collections[self.collection])
 
+    def unsubscribe(self, url):
+        # publishing 'unsub' will cause ANY subscribed listener to return
+        # not just self
+        # self.redis.publish(url, json.dumps({'action':'unsub','data':{}}))
+        self.subscribers[url].kill(block=False)
+        del(self.subscribers[url])
+
     def on_setcollection(self, msg):
-        # TODO set self. collection
-        print "setting collection", msg
+        # print "setting collection", msg
+        self.unsubscribe(self.collection)
         self.collection = msg['url']
         self.on_subscribe(msg)
-        # then unsub greenlets
         # fetch of new collection handled by client
-        pass
+
+    def clear_subscribers(self):
+        for sub in self.subscribers:
+            self.subscribers[sub].kill(block=False)
+        self.subscribers = {}
 
 # Some Debug methods
     def on_testemit(self, msg):

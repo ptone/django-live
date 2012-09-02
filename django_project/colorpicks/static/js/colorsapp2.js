@@ -51,7 +51,7 @@ var ColorChoice = Backbone.Model.extend({
         };
     },
 
-    save: $.throttle(500, function(){
+    save: $.throttle(300, function(){
         Backbone.Model.prototype.save.call(this);
     }),
 
@@ -101,7 +101,7 @@ var ColorCollection = Backbone.Collection.extend({
     },
 
   serverDelete: function (data) {
-      console.log("collection serverDelet");
+      console.log("collection serverDelete");
       console.log(data);
     // seems to be buggy here - color not always detected as part of collection
     console.log(this.size());
@@ -111,7 +111,9 @@ var ColorCollection = Backbone.Collection.extend({
         // maybe remove is tolerant of removing a non-existant model?
         this.remove(data);
         } else {
-          console.log("couldn't color in collection");
+          console.log("couldn't find color in collection");
+          console.log(this);
+          console.log(this.models);
           this.remove(data);
         }
   },
@@ -124,6 +126,7 @@ var ColorCollection = Backbone.Collection.extend({
     if (!exists) {
       this.add(data);
     } else {
+      console.log("model already detected in collection");
       data.fromServer = true;
       exists.set(data);
     }
@@ -220,25 +223,28 @@ var ArrayView = Backbone.View.extend({
             // console.log(e);
             var new_url = $(e.target).val();
             this.$el.empty();
+            // this.collection.reset();
 
 // This is one way of handling it, to creat a new collection
-            this.collection = new ColorCollection(new_url);
+            // this.collection = new ColorCollection(new_url);
             // this.collection.fetch();
             //
             window.socket.emit('setcollection', {'url':new_url});
             console.log("new url for collection: " + this.collection.url);
+            this.collection.reset();
+            this.collection.fetch();
 // this is another way - trying to swap out the url
             // this.collection.url = new_url;
             // this.collection.reset();
 
-            this.collection.fetch({'success':_.bind(
-                    function(collection, response){
-                        console.log("fetch sucess callback in colleciton change");
-                        this.render();
-                    }, this)});
-            window.setTimeout(function(){}, 1000);
-            console.log(this.collection.models);
-            this.render();
+            // this.collection.reset();
+            // this.collection.fetch({'success':_.bind(
+                    // function(collection, response){
+                        // console.log("fetch sucess callback in colleciton change");
+                        // this.render();
+                    // }, this)});
+            // console.log(this.collection.models);
+            // this.render();
         }, this));
     },
 
