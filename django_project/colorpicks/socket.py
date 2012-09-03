@@ -15,7 +15,7 @@ from predicate import P
 from colorpicks.models import ColorChoice
 from colorpicks.publisher import collections, Collection
 
-debug = 10
+debug = 1
 
 def dlog(*args, **kwargs):
     """
