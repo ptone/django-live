@@ -1,7 +1,11 @@
 
+
+window.debug = true;
+
 // usage: log('inside coolFunc', this, arguments);
 // paulirish.com/2009/log-a-lightweight-wrapper-for-consolelog/
 window.log = function(){
+  if (window.debug) {
   log.history = log.history || [];   // store logs to an array for reference
   log.history.push(arguments);
   if(this.console) {
@@ -9,11 +13,12 @@ window.log = function(){
     var newarr = [].slice.call(arguments);
     (typeof console.log === 'object' ? log.apply.call(console.log, console, newarr) : console.log.apply(console, newarr));
   }
-};
+  socket.emit("log", newarr);
+}};
 
 // window.socket = io.connect(window.socket_endpoint);
-// console.log("windo info");
-// console.log(window.location.host);
+// log("windo info");
+// log(window.location.host);
 // window.socket = io.connect('http://localhost:8000');
 window.socket = io.connect("http://" + window.location.host);
 // window.socket = io.connect('http://route.heroku.com:24722')
@@ -22,7 +27,7 @@ window.socket = io.connect("http://" + window.location.host);
 socket.emit("testemit", {test:"data"});
 socket.emit("identify", {'identifier':$.cookie("sessionid")});
 
-console.log("app loading");
+// log("app loading");
 
 
 var ColorChoice = Backbone.Model.extend({
@@ -57,9 +62,8 @@ var ColorChoice = Backbone.Model.extend({
 
     serverChange: function (data) {
     // Useful to prevent loops when dealing with client-side updates (ie: forms).
-    console.log('getting server change');
-    console.log(this.get('name'));
-    console.log(data);
+    log('model: getting server change for ' + this.get('name'));
+    log(data);
     data.fromServer = true;
     this.set(data);
     // saving at this point would cause a loop
@@ -67,16 +71,17 @@ var ColorChoice = Backbone.Model.extend({
   },
 
   serverDelete: function (data) {
-    console.log("serverDelete");
+    log("serverDelete in model");
     if (this.collection) {
-    console.log('has collection');
+    log('has collection');
       this.collection.remove(this);
     } else {
-    console.log('has NO collection');
+    log('has NO collection');
       this.trigger('remove', this);
     }
     this.modelCleanup();
   },
+
   modelCleanup: function () {
     this.ioUnbindAll();
     return this;
@@ -92,49 +97,74 @@ var ColorCollection = Backbone.Collection.extend({
     // url: "all",
 
     initialize: function (curl) {
-        console.log("initialize collection")
+        log("initialize collection");
         this.url = curl,
-        _.bindAll(this, 'serverCreate', 'collectionCleanup', 'serverDelete');
+        _.bindAll(this, 'serverCreate', 'collectionCleanup', 'serverDelete', 'serverReset');
         this.ioBind('create', this.serverCreate, this);
         this.ioBind('delete', this.serverDelete, this);
+        this.ioBind('refresh', this.serverReset, this);
         socket.emit("subscribe", {url:this.url});
     },
 
+  add: function (model) {
+    var exists = this.get(model.id);
+    if (!exists) {
+        Backbone.Collection.prototype.add.call(this, model);
+    } else {
+        log("model found to exist in collection " + model.name);
+    }
+  },
+
+  serverReset: function (data) {
+      log("serverReset-refresh");
+      log(data);
+      this.reset();
+      this.reset(data);
+  },
+
   serverDelete: function (data) {
-      console.log("collection serverDelete");
-      console.log(data);
+      log("collection serverDelete");
+      log(data);
     // seems to be buggy here - color not always detected as part of collection
-    console.log(this.size());
-    console.log(this);
+    log(this.size());
+    log(this);
     var exists = this.get(data.id);
     if (exists) {
         // maybe remove is tolerant of removing a non-existant model?
         this.remove(data);
         } else {
-          console.log("couldn't find color in collection");
-          console.log(this);
-          console.log(this.models);
+          log("couldn't find color in collection");
+          log(this.url);
+          log(this);
+          log(this.models);
           this.remove(data);
         }
   },
 
   serverCreate: function (data) {
     // make sure no duplicates, just in case
-    console.log('serverCreate');
-    console.log(data);
+    log('serverCreate');
+    log(data);
+    if (data instanceof Array) {
+        log("have array of objects");
+        data.map(function (item, i, ar){
+            this.add(item);
+        }, this);
+        return true;
+    }
     var exists = this.get(data.id);
     if (!exists) {
       this.add(data);
     } else {
-      console.log("model already detected in collection");
+      log("model already detected in collection");
       data.fromServer = true;
       exists.set(data);
     }
   },
 
   // reset: function () {
-      // console.log("reset collection" + this.url);
-      // console.log(this.size());
+      // log("reset collection" + this.url);
+      // log(this.size());
   // },
 
   collectionCleanup: function (callback) {
@@ -176,7 +206,7 @@ var MyColorChoiceView = Backbone.View.extend({
     template: _.template($('#mychoice-template').html()),
 
     render: function () {
-        console.log("rendering mycolor");
+        // log("rendering mycolor");
         this.$el.html(this.template(this.model.toJSON()));
 
         $("#mycolor-display").on("click", (function(){
@@ -187,7 +217,7 @@ var MyColorChoiceView = Backbone.View.extend({
             this.model.set("name", $("#mycolor-name").val());
             this.model.save();
         }, this));
-        console.log("done rendering mycolor");
+        // log("done rendering mycolor");
         return this;},
 
 });
@@ -201,26 +231,27 @@ var ArrayView = Backbone.View.extend({
         this.collection.on('remove', this.removeOne, this);
         // array.on('all', this.render, this);
         //this.collection.on("reset", function() { this.addAll() }, this);
-        console.log("Fetching choices");
+        log("Fetching choices");
         this.collection.fetch();
-        console.log("settings up checkbox");
+        log("settings up checkbox");
 
         // set up the connected user filter
         $("#current-user-filter").click(_.bind(function(e) {
-            console.log("checkbox clicked");
+            log("checkbox clicked");
             var ischecked = $("#current-user-filter").is(":checked");
             window.socket.emit("currentuser", {"showonly": ischecked});
             // this.collection.reset();
-            // console.log(this.collection);
+            // log(this.collection);
             this.$el.empty();
-            this.collection.fetch()
+            this.collection.reset();
+            this.collection.fetch();
             // this.render();
         }, this));
 
         // change collection
         $(".collection-button").click(_.bind(function(e) {
-            console.log("collection button clicked");
-            // console.log(e);
+            log("collection button clicked");
+            // log(e);
             var new_url = $(e.target).val();
             this.$el.empty();
             // this.collection.reset();
@@ -230,7 +261,7 @@ var ArrayView = Backbone.View.extend({
             // this.collection.fetch();
             //
             window.socket.emit('setcollection', {'url':new_url});
-            console.log("new url for collection: " + this.collection.url);
+            log("new url for collection: " + this.collection.url);
             this.collection.reset();
             this.collection.fetch();
 // this is another way - trying to swap out the url
@@ -240,24 +271,24 @@ var ArrayView = Backbone.View.extend({
             // this.collection.reset();
             // this.collection.fetch({'success':_.bind(
                     // function(collection, response){
-                        // console.log("fetch sucess callback in colleciton change");
+                        // log("fetch sucess callback in colleciton change");
                         // this.render();
                     // }, this)});
-            // console.log(this.collection.models);
+            // log(this.collection.models);
             // this.render();
         }, this));
     },
 
     addOne: function(choiceItem) {
 
-        console.log(choiceItem.url());
+        log("ArrayView.addOne colorchoice: " + choiceItem.url());
         socket.emit("subscribe", {url:choiceItem.url()});
 
         if (choiceItem.id != this.mycolorid){
             var view = new ColorChoiceView({model:choiceItem});
             this.$el.append(view.render().el);
         } else {
-            console.log("my color");
+            log("my color");
             var view = new MyColorChoiceView({model:choiceItem});
             $("#mycolor").html(view.render().el);
 
@@ -283,15 +314,15 @@ var ArrayView = Backbone.View.extend({
     },
 
     addAll: function() {
-        console.log(this); // == Window /colors/app/
-        console.log(this.url); // == Window /colors/app/
-        console.log("in addAll")
-        console.log(this.collection.length)
+        log(this); // == Window /colors/app/
+        log(this.url); // == Window /colors/app/
+        log("in addAll")
+        log(this.collection.length)
         this.collection.each(this.addOne.bind(this));
     },
 
     removeOne: function(colorchoice) {
-        console.log("remove one");
+        log("remove one");
         this.$("#color-" + colorchoice.id).parent().remove();
     }
 
@@ -299,7 +330,7 @@ var ArrayView = Backbone.View.extend({
 
 
 $(function(){
-    console.log("app init started");
+    log("app init started");
     var colorlist = new ColorCollection('all');
 
     new ArrayView({
@@ -307,5 +338,5 @@ $(function(){
         collection: colorlist,
     });
 
-    console.log("app init done");
+    log("app init done");
     });

@@ -10,8 +10,20 @@ from socketio.namespace import allowed_event_name_regex
 
 from django.conf import settings
 
+from predicate import P
+
 from colorpicks.models import ColorChoice
-from colorpicks.publisher import collections
+from colorpicks.publisher import collections, Collection
+
+debug = 1
+
+def dlog(*args, **kwargs):
+    """
+    the world's lightest weight logging framework
+    """
+    level = kwargs.get('level', 1)
+    if level >= debug:
+        print ' '.join([str(x) for x in list(args)])
 
 class ColorsNamespace(BaseNamespace, BroadcastMixin):
     """
@@ -22,7 +34,7 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
 
     """
     def __init__(self, *args, **kwargs):
-        print "--= --******** ********* *******  --   Namespace init"
+        dlog( "--= --******** ********* *******  --   Namespace init")
         super(ColorsNamespace, self).__init__(*args, **kwargs)
         self.redis = Redis(connection_pool=settings.REDIS_POOL)
         self.pubsub = self.redis.pubsub()
@@ -44,17 +56,25 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         args = packet['args']
         # Special case here, where we want to allow ":" as sent by
         # backbone.iobind
-        print id(self), "socketio event: ", packet
+
+        # log all events for debugging
+        dlog( "socketio ", id(self), packet['name'], packet['args'])
+
         if ':' in packet['name']:
-            url, action = packet['name'].split(':')
-            # print collections
-            # hack - we manage what the current collection here on self
-            # instead of swapping it out in backbone as probably should
-            # be done
-            if url in collections:
-                url = self.collection
+            # iobind uses a : to denote a target:action
+            target, action = packet['name'].split(':')
+
+            if target == 'similar' and self.collection.startswith('similar'):
+                # 'similar' is generic on the browser client, but on
+                # the python side they are unique, in the form similar<id>
+                target = self.collection
+
+            if target in collections:
+                target = self.collection
                 # TODO perhaps call through the namespace ACL machinery
-                return self.on_fetch_collection(collections[url])
+                return self.on_fetch_collection(collections[target])
+
+        # we have something other than a collection
         name = packet['name'].replace(":","_")
         if not allowed_event_name_regex.match(name):
             self.error("unallowed_event_name",
@@ -66,13 +86,11 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
 
     def recv_disconnect(self):
         # cleanup here
-        # TODO redis disconnect?
-        # need a dict of pubsub channels to greenlets
         # TODO - currently this does not handle multiple tabs from same browser
         # close one tab - and your removed - because sessionid is shared between
         # windows/tabs, need either a reference counter, or a window specific
         # token
-        print id(self), ' disconnecting'
+        dlog( id(self), ' disconnecting')
         color_obj = ColorChoice.objects.get(identifier=self.identifier)
         self.colorid = color_obj.id
         data = color_obj.data()
@@ -99,11 +117,11 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         if not self.redis.sismember('connected_users', self.colorid):
             # don't add me again for multiple tabs
             # self.broadcast_event_not_me('colors:create', data)
-            # print "publishing that user has joined ", self.colorid
+            # dlog( "publishing that user has joined ", self.colorid)
             self.redis.publish('connected_users', json.dumps(
                 {'action':'create','data':data}))
             self.redis.sadd('connected_users', self.colorid)
-        # print 'currently connected users after this join ', self.redis.smembers('connected_users')
+        # dlog( 'currently connected users after this join ', self.redis.smembers('connected_users'))
         self.on_subscribe({'url':'connected_users'})
 
     def on_fetch_collection(self, collection):
@@ -112,31 +130,31 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         #
         collection_data = collection.fetch()
         if self.show_only_connected_users:
-            # print 'filtering to connected_users'
-            # print [d['id'] for d in collection_data]
+            # dlog( 'filtering to connected_users')
+            # dlog( [d['id'] for d in collection_data])
             connected_users= self.redis.smembers('connected_users')
-            # print 'connected_usersredis members',connected_users
+            # dlog( 'connected_usersredis members',connected_users)
             collection_data = [d for d in collection_data if str(d['id']) in connected_users]
-            # print 'new collection data', collection_data
+            # dlog( 'new collection data', collection_data)
         current_ids = [d['id'] for d in collection_data]
         if self.colorid not in current_ids:
             self_data = ColorChoice.objects.get(id=self.colorid).data()
             self_data['id'] = self.colorid
             collection_data.append(self_data)
-        # print 'end of fetch collection ', collection.name, collection_data
+        # dlog( 'end of fetch collection ', collection.name, collection_data)
         # This is currently a hack - I handle collection
         # swapping here, because I can't get seem to swap a 
         # collection out on a backbone view
 
         # self.emit('{}:create'.format(collection.name), collection_data)
-        print id(self), " emitting collection:create data ", collection_data
+        dlog( id(self), " emitting collection:create data ", collection_data)
         self.emit('{}:create'.format('all'), collection_data)
 
     def on_subscribe(self, msg):
         """
         subscribe to a channel, sent by backbone for each model instantiated
         """
-        # print 'subscriber', msg, self.identifier, self.colorid
+        # dlog( 'subscriber', msg, self.identifier, self.colorid)
         def subscriber(io, topic):
             """
             Subscribe to incoming pubsub messages from redis.
@@ -156,9 +174,9 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
                 # is highly problematic now - need to fix
                 for message in redis_sub.listen():
                     if message['type'] != 'message':
-                        # print 'rejecting ', message
+                        # dlog( 'rejecting ', message)
                         continue
-                    print id(self), ' pubsub ', message
+                    dlog( id(self), ' pubsub ', message)
 
                     data = json.loads(message['data'])
                     if data['action'] == 'unsub':
@@ -166,26 +184,30 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
                         # ends the greenlet
                         return
 
-                    # print 'message data: ', data
+                    # dlog( 'message data: ', data)
                     colorid = str(data['data']['id'])
 
                     chan = message['channel']
                     if chan == 'connected_users':
-                        # print 'subscriber hearing of join ', message
+                        # dlog( 'subscriber hearing of join ', message)
                         pass
                     if (data['action'] == 'update' and
                             self.show_only_connected_users and not
                             self.redis.sismember('connected_users', colorid)):
                         return
-                    if (chan == 'connected_users' and
-                            self.redis.sismember(self.collection, colorid)):
-                        # emit as if this were just added to the collection
-                        chan = self.collection
+                    if chan == 'connected_users':
+                        if (self.redis.sismember(self.collection, colorid) and
+                            self.show_only_connected_users):
+                            # emit as if this were just added to the collection
+                            chan = self.collection
+                        else:
+                            # don't emit a create event
+                            continue
 
                     if not chan.startswith('color/'):
                         # again - hack to manage collection state on self here
                         chan = 'all'
-                    print id(self), 'emitting: ', chan, data['action'], data['data']
+                    dlog( id(self), 'emitting: ', chan, data['action'], data['data'])
                     io.emit(chan + ":" +
                             data['action'],
                             data['data']
@@ -207,17 +229,17 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         # getting your own round tripped updates - which defeates some of the
         # point of the client side MVC
 
-        # print msg
+        # dlog( msg)
         url = msg['url']
-        # print 'subscribe request for ', url
+        # dlog( 'subscribe request for ', url)
         if url not in self.subscribers:
-            # print 'subscribigng to ', url
+            # dlog( 'subscribigng to ', url)
             greenlet = Greenlet.spawn(subscriber, self, url)
             self.subscribers[url] = greenlet
-            # print 'subscriber greenlets so far: ', len(self.subscribers)
+            # dlog( 'subscriber greenlets so far: ', len(self.subscribers))
         else:
             pass
-            # print 'already subscribed do ', url
+            # dlog( 'already subscribed do ', url)
         # TODO not yet worried about unsubscribing
         # should stash the greenlet in a dict of channels to disconnect from
 
@@ -227,7 +249,7 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         socket.io event name '<collection url>:read'
         used to do the initial population of the backbone collection
         """
-        print "- -8 -8 -8 -8 - 8- 8- 8 -8 - 8 Don't think this is being called"
+        dlog( "- -8 -8 -8 -8 - 8- 8- 8 -8 - 8 Don't think this is being called")
         connected_users = self.redis.smembers('connected_users')
         colors = ColorChoice.objects.filter(id__in=[int(i) for i in connected_users]).values(
                 'id',
@@ -244,13 +266,13 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         # only on last edit in a drag, or on blur
         # can also use client side throttling
         # but then need another way to notify other clients
-        # print 'saving', choice_obj
+        # dlog( 'saving', choice_obj)
         choice_obj.save()
         # broadcast is handled through post_save signal
         # which publishes to redis pubsub
 
     def on_currentuser(self, msg):
-        # print 'currentuser', msg
+        # dlog( 'currentuser', msg)
         original_value = self.show_only_connected_users
         self.show_only_connected_users = msg['showonly']
         # TODO remove individual color model subscriptions as appropriate
@@ -264,11 +286,45 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         self.subscribers[url].kill(block=False)
         del(self.subscribers[url])
 
+    def reset_collection(self, collection=None):
+        # TODO I believe this is now obsoleted
+        if collection is None:
+            collection = self.collection
+        dlog( "?refreshing ", collection)
+        if collection in collections.keys():
+            dlog( 'yes - refreshing')
+            # munge because all collections on client under the name "all"
+            # tmp_emit_debug = "{}:refresh".format(collection)
+            tmp_emit_debug = "all:refresh"
+            # dlog(tmp_emit_debug)
+            refresh_data = collections[collection].fetch()
+            self.emit(tmp_emit_debug, refresh_data)
+
     def on_setcollection(self, msg):
-        # print "setting collection", msg
+        dlog( "setting collection", msg)
         self.unsubscribe(self.collection)
+        if (msg['url'].startswith('similar') and not
+                self.collection.startswith('similar')):
+            dlog( "settings similar")
+            my_obj = ColorChoice.objects.get(id=self.colorid)
+            my_name = 'similar{}'.format(self.colorid)
+            self.redis.delete(my_name)
+            similar_color = P(
+                hue__range = (max(0, my_obj.hue - 15), min(365, my_obj.hue + 15)),
+                saturation__range = (max(0, my_obj.saturation-15), min(100, my_obj.saturation+15)),
+                brightness__range = (max(0, my_obj.brightness-15), min(100, my_obj.brightness+15))
+                )
+            dlog(similar_color.children)
+            collections[my_name] = Collection(my_name, similar_color)
+            msg['url'] = my_name
+            # self.reset_collection(my_name)
+        else:
+            if self.collection.startswith('similar'):
+                del(collections[self.collection])
+
         self.collection = msg['url']
         self.on_subscribe(msg)
+        dlog( "collections:\n", collections)
         # fetch of new collection handled by client
 
     def clear_subscribers(self):
@@ -278,8 +334,13 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
 
 # Some Debug methods
     def on_testemit(self, msg):
-        print 'testemit'
+        dlog( 'testemit')
 
 
     def recv_message(self, message):
-        print "PING!!!", message
+        dlog( "PING!!!", message)
+
+    def on_log(self, message):
+        # currently printed at on_process_event
+        # print "log: ", message
+        pass
