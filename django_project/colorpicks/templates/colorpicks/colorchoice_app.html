@@ -1,12 +1,15 @@
 {% extends "base.html" %}
 {% block main %}
-<h2>My Color</h2>
+<div class="row">
+<div class="span4">
 <div>
     <div id="mycolor"></div>
     <input class="colorpicker" id="id_color_choice" name="color_choice" value="" type="hidden">
 </div>
-<ul id="color-choices-list">
-    <li>static dummy</li>
+</div>
+</div>
+<hr>
+<ul id="color-choices-list" class="thumbnails">
 </ul >
 
 {% endblock %}
@@ -19,17 +22,19 @@
 <script src="{{ STATIC_URL }}js/libs/jquery.ba-throttle-debounce.min.js"></script>
 
   <script type="text/template" id="item-template">
-      <%= name %>
+    <div class="color-choice">
       <div class="color-box" style="
           background-color:<%= color_choice %>;
-            height: 20px;
-            width: 50px;"></div>
+"></div>
+            <%= name %>
+        </div>
   </script>
 
   <script type="text/template" id="mychoice-template">
-    <div id="mycolor-display" style="background-color:<%= color_choice %>;
-        height: 200px;
-        width: 600px;"></div>
+      <div class="my-color-entry">
+    <label>Name or Label:</label><input id="mycolor-name" type="text" value="<%= name %>" name="name">
+    <div id="mycolor-display" style="background-color:<%= color_choice %>;"></div>
+    </div>
   </script>
 
 <script src="{{ STATIC_URL }}js/colorsapp.js"></script>

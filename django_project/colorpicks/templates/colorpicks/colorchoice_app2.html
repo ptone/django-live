@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% block main %}
-<h2>ColorLand - Live</h2>
 <div class="row">
 <div class="span4">
     <div id="mycolor"></div>
@@ -19,7 +18,7 @@
         </div>
         <div class="span4">
             <div class="btn-group" data-toggle="buttons-radio">
-            <button class="btn collection-button" value="all">All</button>
+            <button id="all-button" class="btn collection-button" value="all">All</button>
             <button class="btn collection-button" value="blue">Blue</button>
             <button class="btn collection-button" value="django">Django</button>
             <button class="btn collection-button" value="similar">Similar</button>
@@ -46,7 +45,6 @@
 
 <script type="text/template" id="item-template">
     <div id="color-<%= id %>" class="color-choice">
-      
       <div class="color-box" style="
           background-color:<%= color_choice %>;
 "></div>

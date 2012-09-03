@@ -337,6 +337,6 @@ $(function(){
         el:$("#color-choices-list"),
         collection: colorlist,
     });
-
+    $("#all-button").button('toggle');
     log("app init done");
     });
