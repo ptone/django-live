@@ -2,33 +2,44 @@
 {% block main %}
 <div class="container" id="colorsapp">
 
-    <!-- Main hero unit for a primary marketing message or call to action -->
-    <div class="hero-unit">
-        <h1>Hello, world!</h1>
-        <p>This is a template for a simple marketing or informational website. It includes a large callout called the hero unit and three supporting pieces of content. Use it as a starting point to create something more unique.</p>
-        <p><a class="btn btn-primary btn-large">Learn more &raquo;</a></p>
-    </div>
 
     <!-- Example row of columns -->
     <div class="row">
-        <div class="span6">
-            <h2>Color</h2>
-            <ul id="colorslist">
-                <li>color 1</li>
-            </ul>
+        <div class="span8">
+            <h2>Demo of integrating traditional and realtime views</h2>
         </div>
-        <div class="span6">
-            <h2>Heading</h2>
-            <p>Donec sed odio dui. Cras justo odio, dapibus ac facilisis in, egestas eget quam. Vestibulum id ligula porta felis euismod semper. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus.</p>
-            <p><a class="btn" href="#">View details &raquo;</a></p>
+    </div>
+    <div class="row spacer">
+        <div class="span3">
+            <a class="btn btn-block" href="/colors/">The standard Django View</a>
+        </div>
+        <div class="span4">
+            This view uses a combination of generic list and form views, to handle 
+            changes in the traditional request/response cycle.
+        </div>
+    </div>
+
+    <div class="row spacer">
+        <div class="span3">
+            <a class="btn btn-block" href="/colors/app">Backbone.js with ajax</a>
+        </div>
+        <div class="span4">In this version, backbone is used to structure the
+            app on the page, and changes are synced back to the server via ajax calls 
+            to Django Rest Framework resources.
+        </div>
+    </div>
+
+    <div class="row spacer">
+        <div class="span3">
+            <a class="btn btn-block" href="/colors/app2">Backbone.js with websockets and collections</a>
+        </div>
+        <div class="span4">The main demo. This uses the notion of a collection with
+            predicates on the server, connected to socketio through redis-pubsub to provide
+            a fully duplex and realtime web experience. Because the collections are integrated
+            with Django's model signals, they propogate model changes made through other channels.
         </div>
     </div>
 
     <hr>
-
-    <footer>
-    <p>&copy; Company 2012</p>
-    </footer>
-
 </div> <!-- /container -->
 {% endblock %}
