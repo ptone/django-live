@@ -1,6 +1,6 @@
 
 
-window.debug = true;
+window.debug = false;
 
 // usage: log('inside coolFunc', this, arguments);
 // paulirish.com/2009/log-a-lightweight-wrapper-for-consolelog/
