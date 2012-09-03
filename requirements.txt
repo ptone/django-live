@@ -3,7 +3,7 @@ Pygments==1.5
 URLObject==2.0.2
 django-debug-toolbar==0.9.4
 django-extensions==0.9
-django-predicate
+django-predicate==0.1.1
 djangorestframework==0.3.3
 gevent==0.13.7
 gevent-socketio==0.3.5-rc2
