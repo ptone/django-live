@@ -12,6 +12,9 @@ var ColorChoice = Backbone.Model.extend({
     },
 
     toJSON: function() {
+        // we remove the id from the data sent back when saved
+        // as Django REST framework is not expecting it, and 
+        // will choke on it
         var data = _.clone(this.attributes); 
         delete data.id;
         console.log(data);
