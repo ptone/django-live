@@ -100,7 +100,7 @@ try:
 
     django1 = P(
         hue__range=(154, 160),
-        saturation__range=(40, 82),
+        saturation__range=(35, 82),
         brightness__range=(10, 38)
         )
 
@@ -146,6 +146,10 @@ def publish_color(sender, instance, **kwargs):
 def delete_color(sender, instance, **kwargs):
     for collection in collections.values():
         collection.remove(instance)
+    # send an unsub message to this colors channel
+    # any listening greenlets will unsub and return
+    redis_client.publish('color/{}'.format(instance.id),
+            json.dumps({'action':'unsub', 'data':{}}))
 
 post_save.connect(publish_color, ColorChoice)
 post_delete.connect(delete_color, ColorChoice)
