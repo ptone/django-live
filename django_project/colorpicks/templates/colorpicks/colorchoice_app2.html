@@ -1,65 +1,65 @@
 {% extends "base.html" %}
 {% block main %}
 <div class="row">
-<div class="span4">
-    <div id="mycolor"></div>
-    <input class="colorpicker" id="id_color_choice" name="color_choice" value="" type="hidden">
-
-</div>
     <div class="span4">
-    There is no submit button - just enter a label, then click on the large swatch above to change your color.
-    Play with choosing whose colors to see in realtime below.
+        <div id="mycolor"></div>
+        <input class="colorpicker" id="id_color_choice" name="color_choice" value="" type="hidden">
+
+    </div>
+    <div class="span4">
+        There is no submit button - just enter a label, then click on the large swatch above to change your color.
+        Play with choosing whose colors to see in realtime below.
     </div>
 </div>
 <hr>
 <div class="row">
     <div class="span2">
         <label class="checkbox"><input id="current-user-filter" type="checkbox" checked="checked">Show only connected users</label>
-        </div>
-        <div class="span4">
-            <div class="btn-group" data-toggle="buttons-radio">
+    </div>
+    <div class="span4">
+        <div class="btn-group" data-toggle="buttons-radio">
             <button id="all-button" class="btn collection-button" value="all">All</button>
             <button class="btn collection-button" value="blue">Blue</button>
             <button class="btn collection-button" value="django">Django</button>
             <button class="btn collection-button" value="similar">Similar</button>
         </div>
-        </div>
+    </div>
 
 </div>
 <hr>
 <ul id="color-choices-list" class="thumbnails">
-</ul >
-{% endblock %}
-{% block extrascripts %}
+    </ul >
+    {% endblock %}
+    {% block extrascripts %}
 
 
-<script type="text/javascript" charset="utf-8">
-    window.socket_endpoint = 'http://{{request.META.SERVER_NAME }}:{{ request.META.SERVER_PORT }}';
-</script>
-<script src="{{ STATIC_URL }}js/libs/underscore.js"></script>
-<script src="{{ STATIC_URL }}js/libs/backbone.js"></script>
-<script src="{{ STATIC_URL }}js/libs/socket.io.min.js"></script>
-<script src="{{ STATIC_URL }}js/libs/backbone.iobind.js"></script>
-<script src="{{ STATIC_URL }}js/libs/backbone.iosync.js"></script>
-<script src="{{ STATIC_URL }}js/libs/jquery.ba-throttle-debounce.min.js"></script>
+    <script type="text/javascript" charset="utf-8">
+        window.socket_endpoint = 'http://{{request.META.SERVER_NAME }}:{{ request.META.SERVER_PORT }}';
+    </script>
+    <script src="{{ STATIC_URL }}js/libs/underscore.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/backbone.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/socket.io.min.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/backbone.iobind.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/backbone.iosync.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/jquery.ba-throttle-debounce.min.js"></script>
 
-<script type="text/template" id="item-template">
-    <div id="color-<%= id %>" class="color-choice">
-      <div class="color-box" style="
-          background-color:<%= color_choice %>;
-"></div>
+    <script type="text/template" id="item-template">
+        <div id="color-<%= id %>" class="color-choice">
+            <div class="color-box" style="
+                background-color:<%= color_choice %>;
+                "></div>
             <%= name %>
         </div>
-  </script>
+    </script>
 
-  <script type="text/template" id="mychoice-template">
-      <div class="my-color-entry">
-    <label>Name or Label:</label><input id="mycolor-name" type="text" value="<%= name %>" name="name">
-    <div id="mycolor-display" style="background-color:<%= color_choice %>;"></div>
-    </div>
-  </script>
+    <script type="text/template" id="mychoice-template">
+        <div class="my-color-entry">
+            <label>Name or Label:</label><input id="mycolor-name" type="text" value="<%= name %>" name="name">
+            <div id="mycolor-display" style="background-color:<%= color_choice %>;"></div>
+        </div>
+    </script>
 
-<script src="{{ STATIC_URL }}js/colorsapp2.js"></script>
+    <script src="{{ STATIC_URL }}js/colorsapp2.js"></script>
 
 
-{% endblock %}
+    {% endblock %}

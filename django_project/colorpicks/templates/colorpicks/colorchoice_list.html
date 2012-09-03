@@ -2,40 +2,40 @@
 {% block main %}
 {{ form.errors }}
 <div class="row">
-<div class="span4">
-<div>
-    <div id="mycolor"></div>
-    <div class="my-color-entry">
-    <div id="mycolor-display" style="background-color:{{ mycolor.color_choice }};"></div>
-    <form action="" method="POST">
-    {% for hidden in form.hidden_fields %}
-    {{ hidden }}
-    {% endfor %}
-    {% csrf_token %}
-    <label>Name or Label:</label><input id="id_name" type="text" value="{{ mycolor.name }}" name="name">
-    <input class="colorpicker" id="id_color_choice" name="color_choice" value="{{ mycolor.color_choice }}" type="hidden">
-    <input type="submit" name="change_color" value="Update" />
-</div>
-</div>
-{% if not mycolor.id %}
-{{ form.as_p }}
-{% endif %}
-</form>
-</div>
+    <div class="span4">
+        <div>
+            <div id="mycolor"></div>
+            <div class="my-color-entry">
+                <div id="mycolor-display" style="background-color:{{ mycolor.color_choice }};"></div>
+                <form action="" method="POST">
+                    {% for hidden in form.hidden_fields %}
+                    {{ hidden }}
+                    {% endfor %}
+                    {% csrf_token %}
+                    <label>Name or Label:</label><input id="id_name" type="text" value="{{ mycolor.name }}" name="name">
+                    <input class="colorpicker" id="id_color_choice" name="color_choice" value="{{ mycolor.color_choice }}" type="hidden">
+                    <input type="submit" name="change_color" value="Update" />
+                </div>
+            </div>
+            {% if not mycolor.id %}
+            {{ form.as_p }}
+            {% endif %}
+        </form>
+    </div>
 </div>
 <hr>
 <ul id="color-choices-list" class="thumbnails">
-{% for obj in object_list %}
-{% if obj != mycolor %}
-<li><div id="color-{{ obj.id }}" class="color-item">
-<div class="color-choice">
-<div class="color-box" style="
-            background-color:{{ obj.color_choice }};">
-</div>
-{{ obj.name }}
-</div></div></li>
-{% endif %}
-{% endfor %}
+    {% for obj in object_list %}
+    {% if obj != mycolor %}
+    <li><div id="color-{{ obj.id }}" class="color-item">
+            <div class="color-choice">
+                <div class="color-box" style="
+                    background-color:{{ obj.color_choice }};">
+                </div>
+                {{ obj.name }}
+    </div></div></li>
+    {% endif %}
+    {% endfor %}
 </ul>
 
 {% endblock %}
@@ -45,10 +45,10 @@
             var colorid = $.cookie('colorid');
 
             $(".colorpicker").miniColors({
-                change: function(hex, rgb){
-                    $("#mycolor-display").css("background-color", hex)}});});
-            $("#mycolor-display").click(function(){
-                $("#id_color_choice").triggerHandler("focus");
+change: function(hex, rgb){
+$("#mycolor-display").css("background-color", hex)}});});
+    $("#mycolor-display").click(function(){
+            $("#id_color_choice").triggerHandler("focus");
             });
-</script>
-{% endblock %}
+        </script>
+        {% endblock %}
