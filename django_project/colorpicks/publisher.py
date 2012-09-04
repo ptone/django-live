@@ -106,13 +106,17 @@ class Collection(object):
         else:
             print 'not removed'
 
-    def fetch(self):
+    def fetch(self, limit=70):
+        """
+        When a collection is first requested from the client
+        we fetch with a sane limit here
+        """
         data = list(
                 ColorChoice.objects.filter(self.predicate).values(
                     'id',
                     'name',
                     'color_choice'
-                    ))
+                    ))[:limit]
         return data
 
 def publish_color(sender, instance, **kwargs):
