@@ -7,8 +7,10 @@
 
     </div>
     <div class="span4">
-        There is no submit button - just enter a label, then click on the large swatch above to change your color.
-        Play with choosing whose colors to see in realtime below.
+        <h3>This is just a toy demo - don't really expect any point to it</h3>
+        There is no submit button - just enter a label, then click on the large swatch to change your color.
+        Play with choosing whose colors to see in realtime below. As other users change their color, they will
+        be updated in realtime.
     </div>
 </div>
 <hr>
@@ -27,39 +29,43 @@
 
 </div>
 <hr>
-<ul id="color-choices-list" class="thumbnails">
-    </ul >
+<div class="row">
+    <div class="span8">
+        <ul id="color-choices-list" class="thumbnails">
+        </ul >
+    </div>
+</div>
     {% endblock %}
     {% block extrascripts %}
 
 
     <script type="text/javascript" charset="utf-8">
         window.socket_endpoint = 'http://{{request.META.SERVER_NAME }}:{{ request.META.SERVER_PORT }}';
-    </script>
-    <script src="{{ STATIC_URL }}js/libs/underscore.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/backbone.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/socket.io.min.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/backbone.iobind.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/backbone.iosync.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/jquery.ba-throttle-debounce.min.js"></script>
+        </script>
+        <script src="{{ STATIC_URL }}js/libs/underscore.js"></script>
+        <script src="{{ STATIC_URL }}js/libs/backbone.js"></script>
+        <script src="{{ STATIC_URL }}js/libs/socket.io.min.js"></script>
+        <script src="{{ STATIC_URL }}js/libs/backbone.iobind.js"></script>
+        <script src="{{ STATIC_URL }}js/libs/backbone.iosync.js"></script>
+        <script src="{{ STATIC_URL }}js/libs/jquery.ba-throttle-debounce.min.js"></script>
 
-    <script type="text/template" id="item-template">
-        <div id="color-<%= id %>" class="color-choice">
-            <div class="color-box" style="
-                background-color:<%= color_choice %>;
-                "></div>
-            <%= name %>
-        </div>
-    </script>
+        <script type="text/template" id="item-template">
+            <div id="color-<%= id %>" class="color-choice">
+                <div class="color-box" style="
+                    background-color:<%= color_choice %>;
+                    "></div>
+                <%= name %>
+            </div>
+        </script>
 
-    <script type="text/template" id="mychoice-template">
-        <div class="my-color-entry">
-            <label>Name or Label:</label><input id="mycolor-name" type="text" value="<%= name %>" name="name">
-            <h5>Click below to change your color</h5><div id="mycolor-display" style="background-color:<%= color_choice %>;"></div>
-        </div>
-    </script>
+        <script type="text/template" id="mychoice-template">
+            <div class="my-color-entry">
+                <label>Name or Label:</label><input id="mycolor-name" type="text" value="<%= name %>" name="name">
+                <h5>Click below to change your color</h5><div id="mycolor-display" style="background-color:<%= color_choice %>;"></div>
+            </div>
+        </script>
 
-    <script src="{{ STATIC_URL }}js/colorsapp2.js"></script>
+        <script src="{{ STATIC_URL }}js/colorsapp2.js"></script>
 
 
-    {% endblock %}
+        {% endblock %}

@@ -229,7 +229,14 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
 
                     chan = message['channel']
 
-                    if (data['action'] == 'update' and
+                    if (data['action'] == 'delete' and
+                            colorid == self.colorid):
+                        # don't delete yourself, this can happen when you
+                        # are watching the 'similar' channel, and you change
+                        # your color
+                        continue
+
+                    if (data['action'] in ['update', 'create'] and
                             self.show_only_connected_users and not
                             self.redis.sismember('connected_users', colorid)):
                         # a color of a non-connected user has been updated
@@ -301,6 +308,10 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         choice_obj.color_choice = msg['color_choice']
         choice_obj.name = msg['name']
         choice_obj.save()
+        if self.collection.startswith('similar'):
+            dlog("reset similar")
+            self.set_similar(my_obj=choice_obj)
+            # self.reset_collection()
         # broadcasting this save is handled through post_save signal
         # which publishes to redis pubsub
 
@@ -327,6 +338,20 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
             refresh_data = collections[collection].fetch()
             self.emit(tmp_emit_debug, refresh_data)
 
+    def set_similar(self, my_obj=None):
+        dlog( "settings similar")
+        if my_obj is None:
+            my_obj = ColorChoice.objects.get(id=self.colorid)
+        my_name = 'similar{}'.format(self.colorid)
+        similar_color = P(
+            hue__range = (max(0, my_obj.hue - 25), min(365, my_obj.hue + 25)),
+            saturation__range = (max(0, my_obj.saturation-20), min(100, my_obj.saturation+20)),
+            brightness__range = (max(0, my_obj.brightness-20), min(100, my_obj.brightness+20))
+            )
+        dlog(similar_color.children)
+        collections[my_name] = Collection(my_name, similar_color)
+        return my_name
+
     def on_setcollection(self, msg):
         """
         this handles the radio button group selection
@@ -334,28 +359,21 @@ class ColorsNamespace(BaseNamespace, BroadcastMixin):
         """
 
         dlog("setting collection", msg)
-        # unsubscribe to the current collection
-        self.unsubscribe(self.collection)
-        if (msg['url'].startswith('similar') and not
-                self.collection.startswith('similar')):
-            # create a new collection on the fly - to look
-            # for similar colors
-            # TODO - need to reset this on my own color change
-            dlog( "settings similar")
-            my_obj = ColorChoice.objects.get(id=self.colorid)
-            my_name = 'similar{}'.format(self.colorid)
-            self.redis.delete(my_name)
-            similar_color = P(
-                hue__range = (max(0, my_obj.hue - 15), min(365, my_obj.hue + 15)),
-                saturation__range = (max(0, my_obj.saturation-15), min(100, my_obj.saturation+15)),
-                brightness__range = (max(0, my_obj.brightness-15), min(100, my_obj.brightness+15))
-                )
-            dlog(similar_color.children)
-            collections[my_name] = Collection(my_name, similar_color)
-            msg['url'] = my_name
-            # self.reset_collection(my_name)
+        if self.collection.startswith(msg['url']):
+            # no change to current collection
+            return
         else:
-            # a common collection
+            # collection has changed
+            # unsubscribe to the current collection
+            self.unsubscribe(self.collection)
+
+        if msg['url'].startswith('similar'):
+            if not self.collection.startswith('similar'):
+                # create a new collection on the fly - to look
+                # for similar colors
+                msg['url'] = self.set_similar()
+                # self.reset_collection(my_name)
+        else:
             if self.collection.startswith('similar'):
                 # if the current collection was 'similar to me'
                 # make sure we remove it from the global collections
