@@ -30,12 +30,23 @@ body {
     width: 100%;
     }
 
-#id_color_choice = {
+#id_color_choice  {
     visibility:hidden;
     }
 
 .spacer {
-    margin-top: 300px;
+    margin-top: 30px;
+    }
+
+.my-color-entry {
+    label {
+        font-size: 16px;
+        line-height: @baseLineHeight * 1.5;
+        }
+    input {
+        font-size: 18px;
+        line-height: @baseLineHeight * 1.5;
+        }
     }
 
 @import "bootstrap/responsive.less";
