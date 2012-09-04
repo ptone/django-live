@@ -165,21 +165,21 @@ try:
         )
 
     django1 = P(
-        hue__range=(154, 160),
-        saturation__range=(35, 82),
-        brightness__range=(10, 38)
+        hue__range=(145, 169),
+        saturation__range=(30, 89),
+        brightness__range=(10, 40)
         )
 
     django2 = P(
-        hue__range=(82, 95),
-        saturation__range=(70,90),
-        brightness__range=(29,90)
+        hue__range=(75, 105),
+        saturation__range=(65,99),
+        brightness__range=(25,90)
         )
 
     django3 = P(
-        hue__range=(131, 148),
-        saturation__range=(20,50),
-        brightness__range=(15,60)
+        hue__range=(122, 157),
+        saturation__range=(12,59),
+        brightness__range=(12,69)
         )
 
     django_colors = django1 | django2 | django3
